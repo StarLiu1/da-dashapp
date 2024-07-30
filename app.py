@@ -693,7 +693,7 @@ def update_thresholds(data_type, uploaded_data, imported_data):
             max_threshold = np.max(predictions)
             return min_threshold, max_threshold, {i: f'{i:.1f}' for i in np.linspace(min_threshold, max_threshold, 11)}
 
-server = app.server
+# server = app.server
 
 
 if __name__ == '__main__':
