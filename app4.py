@@ -3,7 +3,7 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State, MATCH, ALL
 import pandas as pd
 import numpy as np
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_curve
 import plotly.graph_objects as go
 import base64
 import io
@@ -27,6 +27,7 @@ app.layout = html.Div([
                 ],
                 value='simulated'
             ),
+            # html.Button('Refresh', id='refresh-button', n_clicks=0),  # Add this line
             html.Div(id='input-fields', style={'width': '95%'}),
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
         html.Div(dcc.Graph(id='distribution-plot', config={'displayModeBar': True}), style={'width': '70%'})
@@ -35,7 +36,7 @@ app.layout = html.Div([
         
         html.Div([
             html.Div([
-                html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 5}),
+                html.H3(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='cutoff-slider',
@@ -43,13 +44,10 @@ app.layout = html.Div([
                         max=5,
                         step=0.01,
                         value=0,
-                        tooltip={"placement": "right", "always_visible": False},
-                        marks = {i: f'{i:.1f}' for i in range(-5, 6)}
+                        marks={i: f'{i:.1f}' for i in np.linspace(-5, 6, 12)}
                     )
                 ], style={'width': 550}),
-                # html.H4("Utilities", style={'marginTop': 5}),
-                html.H4(id='utp-value', children='Utility of true positive (uTP): ', style={'marginTop': 5}),
-                # html.H4("Utility of true positive (uTP)", style={'marginTop': 5}),
+                html.H3("Utilities", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTP-slider',
@@ -57,12 +55,9 @@ app.layout = html.Div([
                         max=1,
                         step=0.01,
                         value=0.8,
-                        tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='ufp-value', children='Utility of false positive (uFP): ', style={'marginTop': 5}),
-                # html.H4("Utility of false positive (uFP)", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFP-slider',
@@ -70,12 +65,9 @@ app.layout = html.Div([
                         max=1,
                         step=0.01,
                         value=0.6,
-                        tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='utn-value', children='Utility of true negative (uTN): ', style={'marginTop': 5}),
-                # html.H4("Utility of true negative (uTN)", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTN-slider',
@@ -83,12 +75,9 @@ app.layout = html.Div([
                         max=1,
                         step=0.01,
                         value=1,
-                        tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='ufn-value', children='Utility of false negative (uFN): ', style={'marginTop': 5}),
-                # html.H4("Utility of false negative (uFN)", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFN-slider',
@@ -96,12 +85,10 @@ app.layout = html.Div([
                         max=1,
                         step=0.01,
                         value=0,
-                        tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='pd-value', children='Disease Prevalence: ', style={'marginTop': 5}),
-                # html.H4("Disease Prevalence", style={'marginTop': 5}),
+                html.H3("Disease Prevalence"),
                 html.Div([
                     dcc.Slider(
                         id='pD-slider',
@@ -109,12 +96,11 @@ app.layout = html.Div([
                         max=1,
                         step=0.01,
                         value=0.5,
-                        tooltip={"placement": "right", "always_visible": False},
                         marks={i: str(np.round(i,1)) for i in np.arange(0, 1, 0.1)}
                         # marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
+                html.H3(id='optimalcutoff-value'),
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
@@ -125,6 +111,12 @@ app.layout = html.Div([
         dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1)
     ]),
     dcc.Store(id='dummy-state', data={}),
+
+    # html.Div([
+    #     dcc.Interval(id='imported-interval', interval=1000, n_intervals=0, max_intervals=1)
+    # ]), # ensure imported-interval is always in the layout
+
+    
 ])
 
 
@@ -135,72 +127,71 @@ app.layout = html.Div([
 def update_input_fields(data_type):
     if data_type == 'simulated':
         return html.Div([
-            html.H4(
-                id='placeHolder',
-                children=html.Div([
-                    'To upload data, select "Import Data" from dropdown'
-                ]),
-                style={
-                    'width': '100%',
-                    'height': '60px',
-                    'lineHeight': '60px',
-                    'borderWidth': '1px',
-                    'borderStyle': 'dashed',
-                    'borderRadius': '5px',
-                    'textAlign': 'center',
-                    'margin': '10px'
-                },
-            ),
-
+            # dcc.Upload(
+            #     id={'type': 'upload-data', 'index': 0},
+            #     children=html.Div([
+            #         'Drag and Drop or ',
+            #         html.A('Select Files')
+            #     ]),
+            #     style={
+            #         'width': '100%',
+            #         'height': '60px',
+            #         'lineHeight': '60px',
+            #         'borderWidth': '1px',
+            #         'borderStyle': 'dashed',
+            #         'borderRadius': '5px',
+            #         'textAlign': 'center',
+            #         'margin': '10px'
+            #     },
+            #     multiple=False
+            # ),
+            # html.Div(id={'type': 'dynamic-output', 'index': 0}),
+            # html.Div(id={'type': 'dynamic-output', 'index': 0}),
+            # dcc.Interval(id={'type': 'interval-component', 'index': 0}, interval=5*1000, n_intervals=0, disabled=True),
+            # html.Div([
+            #     dcc.Interval(id='imported-interval', interval=1000, n_intervals=0, max_intervals=1, disabled= True)
+            # ]), #trigger for uploaded data
             html.Div([
-                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5}),
-                # html.H4("Disease Mean", style={'marginTop': 5}),
+                html.H3("Disease Mean"),
                 dcc.Slider(
                     id='disease-mean-slider',
                     min=-3,
                     max=3,
                     step=0.1,
                     value=1,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Disease Standard Deviation", style={'marginTop': 5}),
+                html.H3("Disease Standard Deviation"),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
                     max=3,
                     step=0.1,
                     value=1,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5}),
-                # html.H4("Healthy Mean", style={'marginTop': 5}),
+                html.H3("Healthy Mean"),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
                     max=3,
                     step=0.1,
                     value=0,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Healthy Standard Deviation", style={'marginTop': 5}),
+                html.H3("Healthy Standard Deviation"),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
                     max=3,
                     step=0.1,
                     value=1,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
             ], style={'width': 550}),
@@ -226,58 +217,49 @@ def update_input_fields(data_type):
                 multiple=False
             ),
             html.Div(id='uploaded-data-info'),  # Add this line
-            # html.Button('Clear Upload', id='clear-upload-button', n_clicks=0),  # Add this line
             dcc.Interval(id={'type': 'interval-component', 'index': 0}, interval=2*1000, n_intervals=0, disabled=True),
 
             html.Div([
-                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5}),
-                # html.H4("Disease Mean", style={'marginTop': 5}),
+                html.H3("Disease Mean"),
                 dcc.Slider(
                     id='disease-mean-slider',
                     min=-3,
                     max=3,
                     step=0.1,
                     value=1,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Disease Standard Deviation", style={'marginTop': 5}),
+                html.H3("Disease Standard Deviation"),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
                     max=3,
                     step=0.1,
                     value=1,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5}),
-                # html.H4("Healthy Mean", style={'marginTop': 5}),
+                html.H3("Healthy Mean"),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
                     max=3,
                     step=0.1,
                     value=0,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Healthy Standard Deviation", style={'marginTop': 5}),
+                html.H3("Healthy Standard Deviation"),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
                     max=3,
                     step=0.1,
                     value=1,
-                    tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
             ], style={'width': 550}),
@@ -285,7 +267,9 @@ def update_input_fields(data_type):
             dcc.Store(id='imported-data'),
             dcc.Store(id='min-threshold-store'),
             dcc.Store(id='max-threshold-store'),
-
+            # html.Div([
+            #     dcc.Interval(id='imported-interval', interval=1000, n_intervals=0, max_intervals=1)
+            # ]), #trigger for uploaded data
         ])
     
     # else:
@@ -305,24 +289,26 @@ def parse_contents(contents = "true_labels,predictions"):
 @app.callback(
     Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
     Output({'type': 'interval-component', 'index': MATCH}, 'disabled'),
-    Output({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
     # Output({'type': 'imported-interval', 'index': MATCH}, 'disabled'),
     Input({'type': 'upload-data', 'index': MATCH}, 'contents'),
     Input({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
-    State({'type': 'interval-component', 'index': MATCH}, 'n_intervals')
     # Input({'type': 'imported-interval', 'index': MATCH}, 'n_intervals')
 )
-def handle_uploaded_data(contents, n_intervals, current_intervals):
+def handle_uploaded_data(contents, n_intervals):
     if contents and n_intervals == 0:
         df = parse_contents(contents)
         return (html.Div([
                     html.H5('Uploaded Data:'),
                     html.P(f'{df.shape[0]} rows, {df.shape[1]} columns. Please select a cutoff to get started...'),
+                    # html.Div([
+                    #     dcc.Interval(id='imported-interval', interval=1000, n_intervals=0, max_intervals=2)
+                    # ])
                 ]),
-                False, 0)  # Enable the interval component
+                False)  # Enable the interval component
     elif n_intervals > 0:
-        return html.Div(), True, 0  # Disable the interval component and clear the output
-    return html.Div(), True, current_intervals
+        return html.Div(), True  # Disable the interval component and clear the output
+    return html.Div(), True
+
 
 previous_values = {
     'predictions': [0, 0, 0],
@@ -343,18 +329,7 @@ imported = False
      Output('optimalcutoff-value', 'children'), 
      Output('utility-plot', 'figure'),
      Output('distribution-plot', 'figure'),
-     Output('initial-interval', 'disabled', allow_duplicate=True),
-     Output('dm-value', 'children'), 
-     Output('dsd-value', 'children'), 
-     Output('hm-value', 'children'), 
-     Output('hsd-value', 'children'), 
-     Output('utp-value', 'children'), 
-     Output('ufp-value', 'children'), 
-     Output('utn-value', 'children'), 
-     Output('ufn-value', 'children'), 
-     Output('pd-value', 'children'), 
-
-     ],
+     Output('initial-interval', 'disabled', allow_duplicate=True)],
     [Input('cutoff-slider', 'value'), 
      Input('roc-plot', 'clickData'), 
      Input('uTP-slider', 'value'), 
@@ -415,24 +390,21 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             predictions = df['predictions'].values
 
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
-        auc = roc_auc_score(true_labels, predictions)
         thresholds = cleanThresholds(thresholds)
     elif data_type == 'simulated' or trigger_id == 'initial-interval':
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
         predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
-        auc = roc_auc_score(true_labels, predictions)
     else:
-        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True
+        return dash.no_update
 
-    if (not np.array_equal(predictions, previous_values['predictions']) or not np.array_equal(true_labels, previous_values['true_labels'])) or (trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']):
+    if (not np.array_equal(predictions, previous_values['predictions']) and not np.array_equal(true_labels, previous_values['true_labels'])) or (trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']):
         if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
             np.random.seed(123)
             true_labels = np.random.choice([0, 1], 1000)
             predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
             fpr, tpr, thresholds = roc_curve(true_labels, predictions)
-            auc = roc_auc_score(true_labels, predictions)
 
         outer_idx = max_relative_slopes(fpr, tpr)[1]
         outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
@@ -539,43 +511,16 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
     roc_fig.update_layout(
         title={
-            'text': 'Receiver Operating Characteristic (ROC) Curve',
+            'text': 'ROC Curve',
             'x': 0.5,
             'xanchor': 'center'
         },
         xaxis_title='False Positive Rate (FPR)',
         yaxis_title='True Positive Rate (TPR)',
         template='plotly_white',
-        annotations=[
-        dict(
-            x=0.95,
-            y=0.05,
-            xref='paper',
-            yref='paper',
-            text=f'AUC = {auc:.3f}',
-            showarrow=False,
-            font=dict(
-                size=12,
-                color='black'
-            ),
-            align='right',
-            bgcolor='white',
-            bordercolor='black',
-            borderwidth=1
-        )
-    ]
     )
 
-    disease_m_text = f"Disease Mean: {disease_mean:.2f}"
-    disease_sd_text = f"Disease Standard Deviation: {disease_std:.2f}"
-    healthy_m_text = f"Healthy Mean: {healthy_mean:.2f}"
-    healthy_sd_text = f"Disease Standard Deviation: {healthy_std:.2f}"
     cutoff_text = f"Raw Cutoff: {cutoff:.2f}" if data_type != 'imported' else f"Probability cutoff: {cutoff:.2f}"
-    utp_text = f"Utility of true positive (uTP): {uTP:.2f}"
-    ufp_text = f"Utility of false positive (uFP): {uFP:.2f}"
-    utn_text = f"Utility of true negative (uTN): {uTN:.2f}"
-    ufn_text = f"Utility of false negative (uFN):: {uFN:.2f}"
-    pDisease_text = f"Disease Prevalence:: {pD:.2f}"
     optimal_cutoff_text = f"Optimal Cutoff (H/B: {HoverB:.2f}; Slope: {slope_of_interest:.2f}): {cutoff_optimal_pt:.2f}"
 
     p_values = np.linspace(0, 1, 100)
@@ -592,12 +537,12 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     
     utility_fig.update_layout(
         title={
-            'text': 'Expected Utility Plot for treat all, treat none, and test',
+            'text': 'Utility Lines',
             'x': 0.5,
             'xanchor': 'center'
         },
         xaxis_title='Probability of Disease (p)',
-        yaxis_title='Expected Utility',
+        yaxis_title='Utility',
         template='plotly_white',
     )
 
@@ -653,8 +598,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         )
 
     initial_interval_disabled = initial_intervals >= 1
+    # imported_interval_disabled = imported_interval >= 1
 
-    return roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text, utility_fig, distribution_fig, initial_interval_disabled, disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text, utp_text, ufp_text, utn_text, ufn_text, pDisease_text
+    return roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text, utility_fig, distribution_fig, initial_interval_disabled#, imported_interval_disabled
 
 
 @app.callback(
@@ -666,7 +612,8 @@ def update_dummy_state(data_type):
 
 
 @app.callback(
-
+    # [Output('min-threshold-store', 'data'),
+    #  Output('max-threshold-store', 'data')],
     [Output('cutoff-slider', 'min'),
      Output('cutoff-slider', 'max'),
      Output('cutoff-slider', 'marks')],
@@ -677,8 +624,7 @@ def update_dummy_state(data_type):
 def update_thresholds(data_type, uploaded_data, imported_data):
     print(f'here is imported_data{imported_data} and data type {data_type}')
     if data_type == 'simulated':
-        return -5, 5, {i: f'{i:.1f}' for i in range(-5, 6)}
-    
+        return -5, 5, {i: f'{i:.1f}' for i in np.linspace(-5, 5, 11)}
     else:
         if data_type == 'imported' and uploaded_data and uploaded_data[0]:
             df = parse_contents(uploaded_data[0])

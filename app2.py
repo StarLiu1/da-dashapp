@@ -27,6 +27,7 @@ app.layout = html.Div([
                 ],
                 value='simulated'
             ),
+            # html.Button('Refresh', id='refresh-button', n_clicks=0),  # Add this line
             html.Div(id='input-fields', style={'width': '95%'}),
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
         html.Div(dcc.Graph(id='distribution-plot', config={'displayModeBar': True}), style={'width': '70%'})
@@ -48,8 +49,7 @@ app.layout = html.Div([
                     )
                 ], style={'width': 550}),
                 # html.H4("Utilities", style={'marginTop': 5}),
-                html.H4(id='utp-value', children='Utility of true positive (uTP): ', style={'marginTop': 5}),
-                # html.H4("Utility of true positive (uTP)", style={'marginTop': 5}),
+                html.H4("Utility of true positive (uTP)", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTP-slider',
@@ -61,8 +61,7 @@ app.layout = html.Div([
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='ufp-value', children='Utility of false positive (uFP): ', style={'marginTop': 5}),
-                # html.H4("Utility of false positive (uFP)", style={'marginTop': 5}),
+                html.H4("Utility of false positive (uFP)", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFP-slider',
@@ -74,8 +73,7 @@ app.layout = html.Div([
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='utn-value', children='Utility of true negative (uTN): ', style={'marginTop': 5}),
-                # html.H4("Utility of true negative (uTN)", style={'marginTop': 5}),
+                html.H4("Utility of true negative (uTN)", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTN-slider',
@@ -87,8 +85,7 @@ app.layout = html.Div([
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='ufn-value', children='Utility of false negative (uFN): ', style={'marginTop': 5}),
-                # html.H4("Utility of false negative (uFN)", style={'marginTop': 5}),
+                html.H4("Utility of false negative (uFN)", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFN-slider',
@@ -100,8 +97,7 @@ app.layout = html.Div([
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
                 ], style={'width': 550}),
-                html.H4(id='pd-value', children='Disease Prevalence: ', style={'marginTop': 5}),
-                # html.H4("Disease Prevalence", style={'marginTop': 5}),
+                html.H4("Disease Prevalence", style={'marginTop': 5}),
                 html.Div([
                     dcc.Slider(
                         id='pD-slider',
@@ -125,6 +121,12 @@ app.layout = html.Div([
         dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1)
     ]),
     dcc.Store(id='dummy-state', data={}),
+
+    # html.Div([
+    #     dcc.Interval(id='imported-interval', interval=1000, n_intervals=0, max_intervals=1)
+    # ]), # ensure imported-interval is always in the layout
+
+    
 ])
 
 
@@ -153,8 +155,7 @@ def update_input_fields(data_type):
             ),
 
             html.Div([
-                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5}),
-                # html.H4("Disease Mean", style={'marginTop': 5}),
+                html.H4("Disease Mean", style={'marginTop': 5}),
                 dcc.Slider(
                     id='disease-mean-slider',
                     min=-3,
@@ -166,8 +167,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Disease Standard Deviation", style={'marginTop': 5}),
+                html.H4("Disease Standard Deviation", style={'marginTop': 5}),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
@@ -179,8 +179,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5}),
-                # html.H4("Healthy Mean", style={'marginTop': 5}),
+                html.H4("Healthy Mean", style={'marginTop': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
@@ -192,8 +191,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Healthy Standard Deviation", style={'marginTop': 5}),
+                html.H4("Healthy Standard Deviation", style={'marginTop': 5}),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
@@ -230,8 +228,7 @@ def update_input_fields(data_type):
             dcc.Interval(id={'type': 'interval-component', 'index': 0}, interval=2*1000, n_intervals=0, disabled=True),
 
             html.Div([
-                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5}),
-                # html.H4("Disease Mean", style={'marginTop': 5}),
+                html.H4("Disease Mean", style={'marginTop': 5}),
                 dcc.Slider(
                     id='disease-mean-slider',
                     min=-3,
@@ -243,8 +240,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Disease Standard Deviation", style={'marginTop': 5}),
+                html.H4("Disease Standard Deviation", style={'marginTop': 5}),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
@@ -256,8 +252,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5}),
-                # html.H4("Healthy Mean", style={'marginTop': 5}),
+                html.H4("Healthy Mean", style={'marginTop': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
@@ -269,8 +264,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': 550}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
-                # html.H4("Healthy Standard Deviation", style={'marginTop': 5}),
+                html.H4("Healthy Standard Deviation", style={'marginTop': 5}),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
@@ -343,18 +337,7 @@ imported = False
      Output('optimalcutoff-value', 'children'), 
      Output('utility-plot', 'figure'),
      Output('distribution-plot', 'figure'),
-     Output('initial-interval', 'disabled', allow_duplicate=True),
-     Output('dm-value', 'children'), 
-     Output('dsd-value', 'children'), 
-     Output('hm-value', 'children'), 
-     Output('hsd-value', 'children'), 
-     Output('utp-value', 'children'), 
-     Output('ufp-value', 'children'), 
-     Output('utn-value', 'children'), 
-     Output('ufn-value', 'children'), 
-     Output('pd-value', 'children'), 
-
-     ],
+     Output('initial-interval', 'disabled', allow_duplicate=True)],
     [Input('cutoff-slider', 'value'), 
      Input('roc-plot', 'clickData'), 
      Input('uTP-slider', 'value'), 
@@ -566,16 +549,16 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     ]
     )
 
-    disease_m_text = f"Disease Mean: {disease_mean:.2f}"
-    disease_sd_text = f"Disease Standard Deviation: {disease_std:.2f}"
-    healthy_m_text = f"Healthy Mean: {healthy_mean:.2f}"
-    healthy_sd_text = f"Disease Standard Deviation: {healthy_std:.2f}"
     cutoff_text = f"Raw Cutoff: {cutoff:.2f}" if data_type != 'imported' else f"Probability cutoff: {cutoff:.2f}"
-    utp_text = f"Utility of true positive (uTP): {uTP:.2f}"
-    ufp_text = f"Utility of false positive (uFP): {uFP:.2f}"
-    utn_text = f"Utility of true negative (uTN): {uTN:.2f}"
-    ufn_text = f"Utility of false negative (uFN):: {uFN:.2f}"
-    pDisease_text = f"Disease Prevalence:: {pD:.2f}"
+    # disease_m_text = f"Disease Mean: {disease_m:.2f}"
+    # disease_sd_text = f"Raw Cutoff: {disease_sd:.2f}"
+    # healthy_m_text = f"Raw Cutoff: {healthy_m:.2f}"
+    # healthy_sd_text = f"Raw Cutoff: {healthy_sd:.2f}"
+    # utp_text = f"Raw Cutoff: {utp:.2f}"
+    # ufp_text = f"Raw Cutoff: {ufp:.2f}"
+    # utn_text = f"Raw Cutoff: {utn:.2f}"
+    # ufn_text = f"Raw Cutoff: {ufn:.2f}"
+    # pDisease_text = f"Raw Cutoff: {pDisease:.2f}"
     optimal_cutoff_text = f"Optimal Cutoff (H/B: {HoverB:.2f}; Slope: {slope_of_interest:.2f}): {cutoff_optimal_pt:.2f}"
 
     p_values = np.linspace(0, 1, 100)
@@ -653,8 +636,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         )
 
     initial_interval_disabled = initial_intervals >= 1
+    # imported_interval_disabled = imported_interval >= 1
 
-    return roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text, utility_fig, distribution_fig, initial_interval_disabled, disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text, utp_text, ufp_text, utn_text, ufn_text, pDisease_text
+    return roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text, utility_fig, distribution_fig, initial_interval_disabled#, imported_interval_disabled
 
 
 @app.callback(
@@ -666,7 +650,8 @@ def update_dummy_state(data_type):
 
 
 @app.callback(
-
+    # [Output('min-threshold-store', 'data'),
+    #  Output('max-threshold-store', 'data')],
     [Output('cutoff-slider', 'min'),
      Output('cutoff-slider', 'max'),
      Output('cutoff-slider', 'marks')],
