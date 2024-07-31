@@ -10,6 +10,11 @@ import io
 from ClinicalUtilityProfiling import *
 from scipy.stats import norm
 
+# #monitor memory usage
+# import psutil
+# from memory_profiler import memory_usage
+# import threading
+
 # Create Dash app
 app = dash.Dash(__name__)
 app.config.suppress_callback_exceptions = True
@@ -124,13 +129,15 @@ app.layout = html.Div([
     html.Div([
         dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1)
     ]),
-    dcc.Store(id='dummy-state', data={}),
+    dcc.Store(id='imported-data'),
+    dcc.Store(id='min-threshold-store'),
+    dcc.Store(id='max-threshold-store'),
 ])
 
 
 @app.callback(
     Output('input-fields', 'children'),
-    Input('data-type-dropdown', 'value')
+    Input('data-type-dropdown', 'value'),
 )
 def update_input_fields(data_type):
     if data_type == 'simulated':
@@ -309,7 +316,8 @@ def parse_contents(contents = "true_labels,predictions"):
     # Output({'type': 'imported-interval', 'index': MATCH}, 'disabled'),
     Input({'type': 'upload-data', 'index': MATCH}, 'contents'),
     Input({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
-    State({'type': 'interval-component', 'index': MATCH}, 'n_intervals')
+    State({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
+    prevent_initial_call=True
     # Input({'type': 'imported-interval', 'index': MATCH}, 'n_intervals')
 )
 def handle_uploaded_data(contents, n_intervals, current_intervals):
@@ -326,7 +334,7 @@ def handle_uploaded_data(contents, n_intervals, current_intervals):
 
 previous_values = {
     'predictions': [0, 0, 0],
-    'true_labels': [0, 0, 0],
+    'true_labels': [0, 1, 0],
     'fpr': [0, 0, 0],
     'tpr': [0, 0, 0],
     'thresholds': [0, 0, 0],
@@ -408,7 +416,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             contents = upload_contents[0]
         df = parse_contents(contents)
         if df is None:
-            true_labels = [0, 0, 0]
+            true_labels = [0, 1, 0]
             predictions = [0, 0, 0]
         else:
             true_labels = df['true_labels'].values
@@ -424,7 +432,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
     else:
-        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True
+        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', ''
 
     if (not np.array_equal(predictions, previous_values['predictions']) or not np.array_equal(true_labels, previous_values['true_labels'])) or (trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']):
         if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
@@ -658,15 +666,6 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
 
 @app.callback(
-    Output('dummy-state', 'data'),
-    Input('data-type-dropdown', 'value')
-)
-def update_dummy_state(data_type):
-    return {'value': data_type}
-
-
-@app.callback(
-
     [Output('cutoff-slider', 'min'),
      Output('cutoff-slider', 'max'),
      Output('cutoff-slider', 'marks')],
@@ -675,7 +674,9 @@ def update_dummy_state(data_type):
     [State('imported-data', 'data')]
 )
 def update_thresholds(data_type, uploaded_data, imported_data):
-    print(f'here is imported_data{imported_data} and data type {data_type}')
+    # print(f'here is imported_data{imported_data} and data type {data_type}')
+    min_threshold = 0
+    max_threshold = 1
     if data_type == 'simulated':
         return -5, 5, {i: f'{i:.1f}' for i in range(-5, 6)}
     
@@ -692,8 +693,20 @@ def update_thresholds(data_type, uploaded_data, imported_data):
             min_threshold = np.min(predictions)
             max_threshold = np.max(predictions)
             return min_threshold, max_threshold, {i: f'{i:.1f}' for i in np.linspace(min_threshold, max_threshold, 11)}
+        return 0, 1, {i: f'{i:.1f}' for i in range(-5, 6)}
 
 server = app.server
+
+#memory monitoring
+# def monitor_memory(interval=2):
+#     process = psutil.Process()
+#     while True:
+#         memory_info = process.memory_info()
+#         print(f"Memory Usage: {memory_info.rss / (1024 ** 2):.2f} MB")
+#         time.sleep(interval)
+
+# # Start the memory monitoring thread
+# memory_thread = threading.Thread(target=monitor_memory, daemon=True)
 
 
 if __name__ == '__main__':
