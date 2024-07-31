@@ -10,6 +10,8 @@ from scipy.optimize import minimize_scalar
 from scipy.optimize import minimize
 import math
 
+import tracemalloc
+
 from scipy.spatial.distance import cdist #for perpendicular distances
 from scipy.optimize import differential_evolution
 
@@ -531,22 +533,26 @@ def bernstein_poly(i, n, t):
 def rational_bezier_curve(control_points, weights, num_points=100):
     """Compute the rational Bezier curve with given control points and weights."""
     n = len(control_points) - 1
-    t_values = (i / (num_points - 1) for i in range(num_points))
+    t_values = np.linspace(0, 1, num_points)
     
-    def curve_generator():
-        for t in t_values:
-            numerator = np.zeros(2)
-            denominator = 0
+    curve_points = []
+    for t in t_values:
+        numerator = np.zeros(2)
+        denominator = 0
+        for i in range(n + 1):
+            B_i = bernstein_poly(i, n, t)
+            numerator += weights[i] * B_i * np.array(control_points[i])
+            denominator += weights[i] * B_i
 
-            for i in range(n + 1):
-                B_i = bernstein_poly(i, n, t)
-                numerator += weights[i] * B_i * np.array(control_points[i])
-                denominator += weights[i] * B_i
+        if denominator == 0:
+            print("Warning: Denominator is zero.")
+            continue
 
-            curve_point = numerator / denominator
-            yield curve_point
+        curve_point = numerator / denominator
+        curve_points.append(curve_point)
+    
+    return np.array(curve_points)
 
-    return curve_generator()
 
 def perpendicular_distance_for_error(points, curve_points):
     """Compute the perpendicular distance from each point to the curve."""
