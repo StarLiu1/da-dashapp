@@ -290,7 +290,7 @@ def max_relative_slopes(fprs, tprs):
         max_slope = -np.inf
         for j in np.arange(i+1, n):
             if((fprs[j] > fprs[i]) | (tprs[j] > tprs[i])):
-                slope = (tprs[j] - tprs[i]) / (fprs[j] - fprs[i])
+                slope = (tprs[j] - tprs[i]) / ((fprs[j] - fprs[i]) + 0.00000000001)
                 if slope >= max_slope:
                     max_slope = slope
                     max_indices[i] = j
@@ -526,25 +526,27 @@ def bernstein_poly(i, n, t):
     """Compute the Bernstein polynomial B_{i,n} at t."""
     return math.comb(n, i) * (t**i) * ((1 - t)**(n - i))
 
+# 
+
 def rational_bezier_curve(control_points, weights, num_points=100):
     """Compute the rational Bezier curve with given control points and weights."""
     n = len(control_points) - 1
-    t_values = np.linspace(0, 1, num_points)
-    curve_points = []
+    t_values = (i / (num_points - 1) for i in range(num_points))
+    
+    def curve_generator():
+        for t in t_values:
+            numerator = np.zeros(2)
+            denominator = 0
 
-    for t in t_values:
-        numerator = np.zeros(2)
-        denominator = 0
+            for i in range(n + 1):
+                B_i = bernstein_poly(i, n, t)
+                numerator += weights[i] * B_i * np.array(control_points[i])
+                denominator += weights[i] * B_i
 
-        for i in range(n + 1):
-            B_i = bernstein_poly(i, n, t)
-            numerator += weights[i] * B_i * np.array(control_points[i])
-            denominator += weights[i] * B_i
+            curve_point = numerator / denominator
+            yield curve_point
 
-        curve_point = numerator / denominator
-        curve_points.append(curve_point)
-
-    return np.array(curve_points)
+    return curve_generator()
 
 def perpendicular_distance_for_error(points, curve_points):
     """Compute the perpendicular distance from each point to the curve."""
@@ -555,7 +557,9 @@ def perpendicular_distance_for_error(points, curve_points):
 def error_function(weights, control_points, empirical_points):
     """Compute the error between the rational Bezier curve and the empirical points."""
     curve_points = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
-    distances = perpendicular_distance_for_error(empirical_points, curve_points)
+    # Process or collect the curve points as needed
+    collected_curve_points = [point for point in curve_points]
+    distances = perpendicular_distance_for_error(empirical_points, collected_curve_points)
     normalized_error = np.sum(distances) / len(empirical_points)
     return normalized_error
 
@@ -769,7 +773,8 @@ def error_function_convex_hull_bezier(weights, fpr, tpr):
     
     """Compute the error between the rational Bezier curve and the empirical points."""
     curve_points = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
-    distances = perpendicular_distance_for_error(empirical_points, curve_points)
+    collected_curve_points = [point for point in curve_points]
+    distances = perpendicular_distance_for_error(empirical_points, collected_curve_points)
     normalized_error = np.sum(distances) / len(empirical_points)
     return normalized_error
 

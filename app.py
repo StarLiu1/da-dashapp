@@ -455,7 +455,8 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
         optimal_weights = result.x
 
-        curve_points = rational_bezier_curve(control_points, optimal_weights)
+        curve_points_generator = rational_bezier_curve(control_points, optimal_weights)
+        curve_points = np.array(list(curve_points_generator))
 
         previous_values['predictions'] = predictions
         previous_values['true_labels'] = true_labels
