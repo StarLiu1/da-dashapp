@@ -17,6 +17,8 @@ from scipy.stats import norm
 
 # Create Dash app
 app = dash.Dash(__name__)
+server = app.server
+
 app.config.suppress_callback_exceptions = True
 app.config.prevent_initial_callbacks='initial_duplicate'
 
@@ -695,7 +697,6 @@ def update_thresholds(data_type, uploaded_data, imported_data):
             return min_threshold, max_threshold, {i: f'{i:.1f}' for i in np.linspace(min_threshold, max_threshold, 11)}
         return 0, 1, {i: f'{i:.1f}' for i in range(-5, 6)}
 
-server = app.server
 
 #memory monitoring
 # def monitor_memory(interval=2):
