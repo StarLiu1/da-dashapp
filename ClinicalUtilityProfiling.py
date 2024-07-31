@@ -325,9 +325,10 @@ def rational_bezier_curve(control_points, weights, num_points=100):
             continue
 
         curve_point = numerator / denominator
-        curve_points.append(curve_point)
+        yield curve_point
+    #     curve_points.append(curve_point)
     
-    return np.array(curve_points)
+    # return np.array(curve_points)
 
 
 def perpendicular_distance_for_error(points, curve_points):
@@ -338,10 +339,11 @@ def perpendicular_distance_for_error(points, curve_points):
 
 def error_function(weights, control_points, empirical_points):
     """Compute the error between the rational Bezier curve and the empirical points."""
-    curve_points = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
+    curve_points_gen = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
+    curve_points = np.array(list(curve_points_gen))
+
     # Process or collect the curve points as needed
-    collected_curve_points = [point for point in curve_points]
-    distances = perpendicular_distance_for_error(empirical_points, collected_curve_points)
+    distances = perpendicular_distance_for_error(empirical_points, curve_points)
     normalized_error = np.sum(distances) / len(empirical_points)
     return normalized_error
 
@@ -444,9 +446,9 @@ def error_function_convex_hull_bezier(weights, fpr, tpr):
     control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
     
     """Compute the error between the rational Bezier curve and the empirical points."""
-    curve_points = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
-    collected_curve_points = [point for point in curve_points]
-    distances = perpendicular_distance_for_error(empirical_points, collected_curve_points)
+    curve_points_gen = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
+    curve_points = np.array(list(curve_points_gen))
+    distances = perpendicular_distance_for_error(empirical_points, curve_points)
     normalized_error = np.sum(distances) / len(empirical_points)
     return normalized_error
 
