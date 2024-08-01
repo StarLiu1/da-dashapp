@@ -14,6 +14,7 @@ from scipy.stats import norm
 # import psutil
 # from memory_profiler import memory_usage
 # import threading
+import os
 
 # Create Dash app
 app = dash.Dash(__name__)
@@ -712,4 +713,7 @@ def update_thresholds(data_type, uploaded_data, imported_data):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    # app.run_server(debug=True)
+
+    port = int(os.environ.get('PORT', 8000))
+    app.run_server(debug=True, host='0.0.0.0', port=port)
