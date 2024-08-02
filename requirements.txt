@@ -6,4 +6,4 @@ plotly==5.9.0
 sympy==1.11.1
 matplotlib==3.7.1
 scipy==1.14.0
-gunicorn
+gunicorn==22.0.0
