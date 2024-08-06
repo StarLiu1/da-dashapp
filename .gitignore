@@ -6,3 +6,6 @@ old/
 *.pyc
 .DS_Store
 Note.txt
+.azure/
+node_modules/
+data.csv
