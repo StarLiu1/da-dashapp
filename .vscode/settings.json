@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/b53f8843-3bdc-4ef4-bb33-756e8e859232/resourceGroups/personalApp/providers/Microsoft.Web/sites/cupda",
+    "appService.deploySubpath": "."
+}
