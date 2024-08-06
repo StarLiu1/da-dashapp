@@ -1,9 +1,6 @@
 # Use the official Python image from the Docker Hub
 FROM python:3.11
 
-# Set the working directory inside the container
-WORKDIR /app
-
 # Copy the requirements file to the container
 COPY requirements.txt .
 
