@@ -23,14 +23,14 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: https://cupdaapp.azurecr.io/
-        username: ${{ secrets.AzureAppService_ContainerUsername_be5410a33bbd49fe9fd1bcb904fb19ac }}
-        password: ${{ secrets.AzureAppService_ContainerPassword_162fea1a2dc849efbd92fe4e476733f9 }}
+        username: ${{ secrets.AzureAppService_ContainerUsername_0b5d7226b449407eae4f343dcca8fa52 }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_bc2a27bddc284b4fabf534ab8f158b8f }}
 
     - name: Build and push container image to registry
       uses: docker/build-push-action@v3
       with:
         push: true
-        tags: cupdaapp.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_be5410a33bbd49fe9fd1bcb904fb19ac }}/mydashapp:${{ github.sha }}
+        tags: cupdaapp.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_0b5d7226b449407eae4f343dcca8fa52 }}/mydashapp2:${{ github.sha }}
         file: ./Dockerfile
 
   deploy:
@@ -47,5 +47,5 @@ jobs:
       with:
         app-name: 'cupda'
         slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_85bc0aa4491f400a84c9fdde9e84ad8a }}
-        images: 'cupdaapp.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_be5410a33bbd49fe9fd1bcb904fb19ac }}/mydashapp:${{ github.sha }}'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_f98fc0892e854c23a36ca1c654a2e9d4 }}
+        images: 'cupdaapp.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_0b5d7226b449407eae4f343dcca8fa52 }}/mydashapp2:${{ github.sha }}'
