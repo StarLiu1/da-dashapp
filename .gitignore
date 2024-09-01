@@ -9,3 +9,4 @@ Note.txt
 .azure/
 node_modules/
 data.csv
+app2.py
