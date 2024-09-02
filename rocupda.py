@@ -10,14 +10,14 @@ import io
 from ClinicalUtilityProfiling import *
 from scipy.stats import norm
 from app import app
-from app_bar import create_app_bar, add_css  # Import the app bar and CSS function
+from app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
 
 # Add CSS for the menu interaction
-add_css(app)
+
 
 layout = html.Div([
     create_app_bar(),
-    dcc.Link('Go to Page 2', href='/page-2'),
+    # dcc.Link('Go to Page 2', href='/page-2'),
     html.Div([
         html.Div([
             dcc.Dropdown(
@@ -29,8 +29,8 @@ layout = html.Div([
                 value='simulated'
             ),
             html.Div(id='input-fields', style={'width': '95%'}),
-        ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
-        html.Div(dcc.Graph(id='distribution-plot', config={'displayModeBar': True}), style={'width': '70%'})
+        ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '45px'}),
+        html.Div(dcc.Graph(id='distribution-plot', config={'displayModeBar': True}), style={'width': '70%', 'paddingTop': '10px'})
     ], style={'display': 'flex', 'width': '100%'}),
     html.Div([
         
@@ -112,8 +112,8 @@ layout = html.Div([
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
-        dcc.Graph(id='roc-plot', config={'displayModeBar': True}, style={'width': '35%'}),
-        dcc.Graph(id='utility-plot', config={'displayModeBar': True}, style={'width': '35%'}),
+        dcc.Graph(id='roc-plot', config={'displayModeBar': True}, style={'width': '33%'}),
+        dcc.Graph(id='utility-plot', config={'displayModeBar': True}, style={'width': '37%'}),
     ], style={'display': 'flex', 'width': '100%'}),
     html.Div([
         dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1)
@@ -121,6 +121,16 @@ layout = html.Div([
     dcc.Store(id='imported-data'),
     dcc.Store(id='min-threshold-store'),
     dcc.Store(id='max-threshold-store'),
+    dcc.Store(id='disease-mean-slider'),
+    dcc.Store(id='disease-std-slider'),
+    dcc.Store(id='healthy-mean-slider'),
+    dcc.Store(id='healthy-std-slider'),
+    dcc.Store(id='dm-value'),
+    dcc.Store(id='dsd-value'),
+    dcc.Store(id='hm-value'),
+    dcc.Store(id='hsd-value'),
+    # Store the dataframe in dcc.Store
+    dcc.Store(id='model-test-store', storage_type='session'),
 ])
 
 @app.callback(
@@ -215,8 +225,17 @@ def update_input_fields(data_type):
                 },
                 multiple=False
             ),
-            html.Div(id='uploaded-data-info'),
-            dcc.Interval(id={'type': 'interval-component', 'index': 0}, interval=2*1000, n_intervals=0, disabled=True),
+            
+            # ConfirmDialog for the popup
+            dcc.ConfirmDialog(
+                id='upload-popup',
+                message='The data has been successfully uploaded. Please wait 3 seconds and select a cutoff to get started.',
+                displayed=False,  # Initially hidden
+            ),
+            
+            # Dynamic content area
+            html.Div(id={'type': 'dynamic-output', 'index': 0}),
+            dcc.Interval(id={'type': 'interval-component', 'index': 0}, interval=2000, n_intervals=0, disabled=True),
             html.Div([
                 html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5}),
                 dcc.Slider(
@@ -265,8 +284,10 @@ def update_input_fields(data_type):
                     marks={i: str(i) for i in range(0, 4)}
                 )
             ], style={'width': 550}),
-            html.Div(id={'type': 'dynamic-output', 'index': 0}),
-            dcc.Store(id='imported-data'),
+            # html.Div(id={'type': 'dynamic-output', 'index': 0}),
+
+
+            # dcc.Store(id='imported-data'),
             dcc.Store(id='min-threshold-store'),
             dcc.Store(id='max-threshold-store'),
         ])
@@ -281,26 +302,57 @@ def parse_contents(contents = "true_labels,predictions"):
         return None
     return df
 
+# @app.callback(
+#     Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
+#     Output({'type': 'interval-component', 'index': MATCH}, 'disabled'),
+#     Output({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
+#     Input({'type': 'upload-data', 'index': MATCH}, 'contents'),
+#     Input({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
+#     State({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
+#     prevent_initial_call=True
+# )
+# def handle_uploaded_data(contents, n_intervals, current_intervals):
+#     if contents and n_intervals == 0:
+#         df = parse_contents(contents)
+#         return (html.Div([
+#                     html.H5('Uploaded Data:'),
+#                     html.P(f'{df.shape[0]} rows, {df.shape[1]} columns. Please select a cutoff to get started...'),
+#                 ]),
+#                 False, 0)
+#     elif n_intervals > 0:
+#         return html.Div(), True, 0
+#     return html.Div(), True, current_intervals
+
+
+@app.callback(
+    Output('upload-popup', 'displayed'),
+    Input({'type': 'upload-data', 'index': 0}, 'contents'),
+    prevent_initial_call=True
+)
+def show_popup(contents):
+    if contents:
+        return True  # Show popup if contents are uploaded
+    return False  # Hide otherwise
+
+
 @app.callback(
     Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
     Output({'type': 'interval-component', 'index': MATCH}, 'disabled'),
     Output({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
-    Input({'type': 'upload-data', 'index': MATCH}, 'contents'),
     Input({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
     State({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
     prevent_initial_call=True
 )
-def handle_uploaded_data(contents, n_intervals, current_intervals):
-    if contents and n_intervals == 0:
-        df = parse_contents(contents)
+def handle_uploaded_data(n_intervals, current_intervals):
+    if n_intervals == 0:
         return (html.Div([
-                    html.H5('Uploaded Data:'),
-                    html.P(f'{df.shape[0]} rows, {df.shape[1]} columns. Please select a cutoff to get started...'),
+                    html.H5('Processing Data...'),
                 ]),
                 False, 0)
     elif n_intervals > 0:
         return html.Div(), True, 0
     return html.Div(), True, current_intervals
+
 
 previous_values = {
     'predictions': [0, 0, 0],
@@ -331,7 +383,7 @@ imported = False
      Output('utn-value', 'children'), 
      Output('ufn-value', 'children'), 
      Output('pd-value', 'children'), 
-
+     Output('model-test-store', 'data')
      ],
     [Input('cutoff-slider', 'value'), 
      Input('roc-plot', 'clickData'), 
@@ -403,7 +455,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
     else:
-        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', ''
+        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None
 
     if (not np.array_equal(predictions, previous_values['predictions']) or not np.array_equal(true_labels, previous_values['true_labels'])) or (trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']):
         if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
@@ -556,7 +608,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     utn_text = f"Utility of true negative (uTN): {uTN:.2f}"
     ufn_text = f"Utility of false negative (uFN):: {uFN:.2f}"
     pDisease_text = f"Disease Prevalence:: {pD:.2f}"
-    optimal_cutoff_text = f"Optimal Cutoff (H/B: {HoverB:.2f}; Slope: {slope_of_interest:.2f}): {cutoff_optimal_pt:.2f}"
+    optimal_cutoff_text = f"H/B of {HoverB:.2f} gives a slope of {slope_of_interest:.2f} at the optimal cutoff point {cutoff_optimal_pt:.2f}"
 
     p_values = np.linspace(0, 1, 100)
     line1 = p_values * uTP + (1 - p_values) * uFP
@@ -564,11 +616,83 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     line3 = p_values * tpr_value * uTP + p_values * (1 - tpr_value) * uFN + (1 - p_values) * fpr_value * uFP + (1 - p_values) * (1-fpr_value) * uTN
     line4 = p_values * tpr_value_optimal_pt * uTP + p_values * (1 - tpr_value_optimal_pt) * uFN + (1 - p_values) * fpr_value_optimal_pt * uFP + (1 - p_values) * (1-fpr_value_optimal_pt) * uTN
 
+
+    xVar = sy.symbols('xVar')
+    #solve for upper threshold formed by test and treat all
+    pU = sy.solve(treatAll(xVar, uFP, uTP) - test(xVar, tpr_value, 1-fpr_value, uTN, uTP, uFN, uFP, 0), xVar)
+
+    #solve for treatment threshold formed by treat all and treat none
+    pStar = sy.solve(treatAll(xVar, uFP, uTP) - treatNone(xVar, uFN, uTN), xVar)
+    
+    #solve for lower threshold formed by treat none and test
+    pL = sy.solve(treatNone(xVar, uFN, uTN) - test(xVar, tpr_value, 1-fpr_value, uTN, uTP, uFN, uFP, 0), xVar)
+
     utility_fig = go.Figure()
-    utility_fig.add_trace(go.Scatter(x=p_values, y=line1, mode='lines', name='Treat All', line=dict(color='yellow')))
+    utility_fig.add_trace(go.Scatter(x=p_values, y=line1, mode='lines', name='Treat All', line=dict(color='green')))
     utility_fig.add_trace(go.Scatter(x=p_values, y=line2, mode='lines', name='Treat None', line=dict(color='orange')))
     utility_fig.add_trace(go.Scatter(x=p_values, y=line3, mode='lines', name='Test', line=dict(color='blue')))
     utility_fig.add_trace(go.Scatter(x=p_values, y=line4, mode='lines', name='Optimal Cutoff', line=dict(color='red')))
+
+    # Add a vertical line at x = pL
+    utility_fig.add_trace(go.Scatter(
+        x=[float(pL[0]), float(pL[0])],  # Same x value for both points to create a vertical line
+        y=[0, 1],  # Full height of the y-axis
+        mode='lines',
+        line=dict(color='orange', width=2, dash='dash'),
+        name="pL Treat-none/Test threshold"
+    ))
+
+    # Add a vertical line at x = pStar
+    utility_fig.add_trace(go.Scatter(
+        x=[float(pStar[0]), float(pStar[0])],  # Same x value for both points to create a vertical line
+        y=[0, 1],  # Full height of the y-axis
+        mode='lines',
+        line=dict(color='black', width=2, dash='dash'),
+        name="pStar Treatment threshold"
+    ))
+
+    # Add a vertical line at x = pU
+    utility_fig.add_trace(go.Scatter(
+        x=[float(pU[0]), float(pU[0])],  # Same x value for both points to create a vertical line
+        y=[0, 1],  # Full height of the y-axis
+        mode='lines',
+        line=dict(color='green', width=2, dash='dash'),
+        name="pU Test/Treat threshold"
+    ))
+
+    # Add annotations to label each line at the bottom of the graph
+    utility_fig.add_annotation(
+        x=float(pL[0]),
+        y=0,
+        xref="x",
+        yref="y",
+        text="pL",
+        showarrow=False,
+        yshift=-10,
+        textangle=0
+    )
+
+    utility_fig.add_annotation(
+        x=float(pStar[0]),
+        y=0,
+        xref="x",
+        yref="y",
+        text="pStar",
+        showarrow=False,
+        yshift=-10,
+        textangle=0
+    )
+
+    utility_fig.add_annotation(
+        x=float(pU[0]),
+        y=0,
+        xref="x",
+        yref="y",
+        text="pU",
+        showarrow=False,
+        yshift=-10,
+        textangle=0
+    )
     
     utility_fig.update_layout(
         title={
@@ -632,9 +756,23 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             template='plotly_white',
         )
 
+
+    # Creating the dataframe
+    modelTest = pd.DataFrame({
+        'tpr': tpr,
+        'fpr': fpr,
+        'thresholds': thresholds
+    })
+    # Convert dataframe to JSON for storage in dcc.Store
+    modelTest_json = modelTest.to_json(date_format='iso', orient='split')
+
+    # print(modelTest_json)
     initial_interval_disabled = initial_intervals >= 1
 
-    return roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text, utility_fig, distribution_fig, initial_interval_disabled, disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text, utp_text, ufp_text, utn_text, ufn_text, pDisease_text
+    return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
+             utility_fig, distribution_fig, initial_interval_disabled,
+               disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
+                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, modelTest_json)
 
 
 @app.callback(
