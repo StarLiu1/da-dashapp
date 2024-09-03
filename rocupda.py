@@ -125,12 +125,13 @@ layout = html.Div([
     dcc.Store(id='disease-std-slider'),
     dcc.Store(id='healthy-mean-slider'),
     dcc.Store(id='healthy-std-slider'),
+    # dcc.Store(id='cutoff-slider'),
     dcc.Store(id='dm-value'),
     dcc.Store(id='dsd-value'),
     dcc.Store(id='hm-value'),
     dcc.Store(id='hsd-value'),
     # Store the dataframe in dcc.Store
-    dcc.Store(id='model-test-store', storage_type='session'),
+    # dcc.Store(id='model-test-store', storage_type='session'),
 ])
 
 @app.callback(
@@ -383,7 +384,7 @@ imported = False
      Output('utn-value', 'children'), 
      Output('ufn-value', 'children'), 
      Output('pd-value', 'children'), 
-     Output('model-test-store', 'data')
+    #  Output('model-test-store', 'data')
      ],
     [Input('cutoff-slider', 'value'), 
      Input('roc-plot', 'clickData'), 
@@ -455,7 +456,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
     else:
-        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None
+        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', ''#, None
 
     if (not np.array_equal(predictions, previous_values['predictions']) or not np.array_equal(true_labels, previous_values['true_labels'])) or (trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']):
         if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
@@ -520,7 +521,8 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr_value_optimal_pt = original_fpr
         cutoff_optimal_pt = closest_prob_cutoff
     else:
-        if trigger_id in ['cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
+        # print(trigger_id)
+        if trigger_id in ['{"index":0,"type":"upload-data"}', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
             H = uTN - uFP
             B = uTP - uFN + 0.000000001
             HoverB = H/B
@@ -534,6 +536,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             tpr_value_optimal_pt = original_tpr
             fpr_value_optimal_pt = original_fpr
             cutoff_optimal_pt = closest_prob_cutoff
+            predictions = np.array(predictions)
 
             tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
             fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
@@ -601,13 +604,13 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     disease_m_text = f"Disease Mean: {disease_mean:.2f}"
     disease_sd_text = f"Disease Standard Deviation: {disease_std:.2f}"
     healthy_m_text = f"Healthy Mean: {healthy_mean:.2f}"
-    healthy_sd_text = f"Disease Standard Deviation: {healthy_std:.2f}"
+    healthy_sd_text = f"Healthy Standard Deviation: {healthy_std:.2f}"
     cutoff_text = f"Raw Cutoff: {cutoff:.2f}" if data_type != 'imported' else f"Probability cutoff: {cutoff:.2f}"
     utp_text = f"Utility of true positive (uTP): {uTP:.2f}"
     ufp_text = f"Utility of false positive (uFP): {uFP:.2f}"
     utn_text = f"Utility of true negative (uTN): {uTN:.2f}"
-    ufn_text = f"Utility of false negative (uFN):: {uFN:.2f}"
-    pDisease_text = f"Disease Prevalence:: {pD:.2f}"
+    ufn_text = f"Utility of false negative (uFN): {uFN:.2f}"
+    pDisease_text = f"Disease Prevalence: {pD:.2f}"
     optimal_cutoff_text = f"H/B of {HoverB:.2f} gives a slope of {slope_of_interest:.2f} at the optimal cutoff point {cutoff_optimal_pt:.2f}"
 
     p_values = np.linspace(0, 1, 100)
@@ -707,13 +710,43 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
     if data_type == 'imported' and upload_contents or (upload_contents and trigger_id == 'imported-interval'):
         distribution_fig = go.Figure()
-        distribution_fig.add_trace(go.Histogram(x=predictions, name='Diseased', opacity=0.75, marker=dict(color='grey')))
+        # distribution_fig.add_trace(go.Histogram(x=predictions, name='Diseased', opacity=0.75, marker=dict(color='grey')))
+        distribution_fig.add_trace(go.Histogram(
+            x=[pred for pred, label in zip(predictions, true_labels) if label == 1],
+            name='Diseased',
+            opacity=0.5,
+            marker=dict(color='blue')
+        ))
+
+        # Add histogram for the non-diseased group (true_label == 0)
+        distribution_fig.add_trace(go.Histogram(
+            x=[pred for pred, label in zip(predictions, true_labels) if label == 0],
+            name='Non-Diseased',
+            opacity=0.5,
+            marker=dict(color='red')
+        ))
+
+        # Get the max value of the histogram counts
+        # Create histograms manually to get y values
+        diseased_hist = np.histogram(
+            [pred for pred, label in zip(predictions, true_labels) if label == 1],
+            bins=20  # You can adjust the number of bins as needed
+        )
+        non_diseased_hist = np.histogram(
+            [pred for pred, label in zip(predictions, true_labels) if label == 0],
+            bins=20  # You can adjust the number of bins as needed
+        )
+
+        # Calculate the maximum y value from both histograms
+        max_histogram_value = max(diseased_hist[0].max(), non_diseased_hist[0].max())
+
+        #plot line
         distribution_fig.add_shape(
             type="line",
             x0=slider_cutoff,
             y0=0,
             x1=slider_cutoff,
-            y1=1,
+            y1=max_histogram_value,
             line=dict(color="blue", width=2, dash="dash"),
             name='Cutoff Line'
         )
@@ -772,7 +805,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
              utility_fig, distribution_fig, initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
-                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, modelTest_json)
+                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text)#, modelTest_json)
 
 
 @app.callback(

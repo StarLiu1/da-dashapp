@@ -14,22 +14,33 @@ from app_bar import create_app_bar
 
 layout = html.Div([
     create_app_bar(),
+    # html.Div([
+    #     # html.Div([
+    #     #     dcc.Dropdown(
+    #     #         id='data-type-dropdown-2',
+    #     #         options=[
+    #     #             {'label': 'Simulated Binormal Model', 'value': 'simulated'},
+    #     #             {'label': 'Imported Data', 'value': 'imported'}
+    #     #         ],
+    #     #         value='simulated'
+    #     #     ),
+    #     #     html.Div(id='input-fields-2', style={'width': '95%'}),
+    #     # ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '45px'}),
+    #     # html.Div(dcc.Graph(id='distribution-plot-2', config={'displayModeBar': True}), style={'width': '70%', 'paddingTop': '10px'})
+    # ], style={'display': 'flex', 'width': '100%'}),
     html.Div([
         html.Div([
-            dcc.Dropdown(
-                id='data-type-dropdown-2',
-                options=[
-                    {'label': 'Simulated Binormal Model', 'value': 'simulated'},
-                    {'label': 'Imported Data', 'value': 'imported'}
-                ],
-                value='simulated'
-            ),
-            html.Div(id='input-fields-2', style={'width': '95%'}),
-        ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '45px'}),
-        html.Div(dcc.Graph(id='distribution-plot-2', config={'displayModeBar': True}), style={'width': '70%', 'paddingTop': '10px'})
-    ], style={'display': 'flex', 'width': '100%'}),
-    html.Div([
-        html.Div([
+            html.Div([
+                dcc.Dropdown(
+                    id='data-type-dropdown-2',
+                    options=[
+                        {'label': 'Simulated Binormal Model', 'value': 'simulated'},
+                        {'label': 'Imported Data', 'value': 'imported'}
+                    ],
+                    value='simulated'
+                ),
+                html.Div(id='input-fields-2', style={'width': '95%'}),
+            ], style={'paddingTop': '45px'}),
             html.Div([
                 html.H4(id='cutoff-value-2', children='Raw Cutoff: ', style={'marginTop': 5}),
                 html.Div([
@@ -107,7 +118,7 @@ layout = html.Div([
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
-        dcc.Graph(id='apar-plot-2', config={'displayModeBar': True}, style={'width': '33%'}),
+        dcc.Graph(id='apar-plot-2', config={'displayModeBar': True}, style={'width': '70%', 'paddingTop': '10px'}),
         # dcc.Graph(id='utility-plot-2', config={'displayModeBar': True}, style={'width': '37%'}),
     ], style={'display': 'flex', 'width': '100%'}),
     html.Div([
@@ -125,7 +136,7 @@ layout = html.Div([
     dcc.Store(id='hm-value-2'),
     dcc.Store(id='hsd-value-2'),
     # Store the dataframe in dcc.Store
-    dcc.Store(id='model-test-store-2', storage_type='session'),
+    # dcc.Store(id='model-test-store-2', storage_type='session'),
 ])
 
 @app.callback(
@@ -329,8 +340,16 @@ previous_values_2 = {
     'fpr': [0, 0, 0],
     'tpr': [0, 0, 0],
     'thresholds': [0, 0, 0],
-    # 'curve_fpr': [0, 0, 0],
-    # 'curve_tpr': [0, 0, 0]
+    'pLs': [0, 0, 0],
+    'pUs': [0, 0, 0],
+    'curve_fpr': [0, 0, 0],
+    'curve_tpr': [0, 0, 0],
+    'cutoff_optimal_pt': 0.5
+}
+modelTest = {
+    'tpr': [0,0,0],
+    'fpr': [0,0,0],
+    'thresholds': [0,0,0]
 }
 
 imported_2 = False
@@ -339,7 +358,7 @@ imported_2 = False
     [Output('apar-plot-2', 'figure'), 
      Output('cutoff-value-2', 'children'), 
      Output('cutoff-slider-2', 'value'), 
-    #  Output('optimalcutoff-value-2', 'children'), 
+     Output('optimalcutoff-value-2', 'children'), 
     #  Output('utility-plot-2', 'figure'),
     #  Output('distribution-plot-2', 'figure'),
      Output('initial-interval-2', 'disabled', allow_duplicate=True),
@@ -383,7 +402,6 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
 
     if not ctx.triggered:
         slider_cutoff = 0.5
-        click_data = None
         uTP = 0.8
         uFP = 0.6
         uTN = 1
@@ -394,9 +412,9 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
         disease_std = 1
         healthy_mean = 0
         healthy_std = 1
-        figure = None
 
     global previous_values_2
+    global modelTest
     global imported_2
     ctx = dash.callback_context
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -412,9 +430,9 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             contents = upload_contents[0]
         df = parse_contents(contents)
         if df is None:
-            true_labels = [0, 1, 1]
-            predictions = [0.1, 0.5, 1.0]
-            thresholds = [0.1, 0.5, 1.0]
+            true_labels = [0, 1, 1, 0, 1, 0, 1, 0, 1, 1]
+            predictions = [0.1, 0.5, 1.0, 0.1, 0.3, 0.8, 0.1, 0.9, 1.0, 1.0]
+            thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         else:
             true_labels = df['true_labels'].values
             predictions = df['predictions'].values
@@ -428,6 +446,33 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             'fpr': fpr,
             'thresholds': thresholds
         })
+        if trigger_id != 'cutoff-slider-2':
+            previous_values_2['predictions'] = predictions
+            previous_values_2['true_labels'] = true_labels
+            previous_values_2['fpr'] = fpr
+            previous_values_2['tpr'] = tpr
+            previous_values_2['thresholds'] = thresholds
+
+            #bezier to find optimal point
+            outer_idx = max_relative_slopes(modelTest['fpr'], modelTest['tpr'])[1]
+            outer_idx = clean_max_relative_slope_index(outer_idx, len(modelTest['tpr']))
+            u_roc_fpr_fitted, u_roc_tpr_fitted = modelTest['fpr'][outer_idx], modelTest['tpr'][outer_idx]
+            u_roc_fpr_fitted, u_roc_tpr_fitted = deduplicate_roc_points(u_roc_fpr_fitted, u_roc_tpr_fitted)
+
+            control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
+            empirical_points = list(zip(modelTest['fpr'], modelTest['tpr']))
+            initial_weights = [1] * len(control_points)
+            bounds = [(0, 20) for _ in control_points]
+
+            result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
+            optimal_weights = result.x
+
+            curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+            curve_points = np.array(list(curve_points_gen)) 
+            previous_values_2['curve_fpr'] = curve_points[:,0]
+            previous_values_2['curve_tpr'] = curve_points[:,1]
+
+        
     elif data_type == 'simulated' or trigger_id == 'initial-interval-2':
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
@@ -440,13 +485,38 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             'fpr': fpr,
             'thresholds': thresholds
         })
+        if trigger_id != 'cutoff-slider-2':
+            previous_values_2['predictions'] = predictions
+            previous_values_2['true_labels'] = true_labels
+            previous_values_2['fpr'] = fpr
+            previous_values_2['tpr'] = tpr
+            previous_values_2['thresholds'] = thresholds
+
+            #bezier to find optimal point
+            outer_idx = max_relative_slopes(modelTest['fpr'], modelTest['tpr'])[1]
+            outer_idx = clean_max_relative_slope_index(outer_idx, len(modelTest['tpr']))
+            u_roc_fpr_fitted, u_roc_tpr_fitted = modelTest['fpr'][outer_idx], modelTest['tpr'][outer_idx]
+            u_roc_fpr_fitted, u_roc_tpr_fitted = deduplicate_roc_points(u_roc_fpr_fitted, u_roc_tpr_fitted)
+
+            control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
+            empirical_points = list(zip(modelTest['fpr'], modelTest['tpr']))
+            initial_weights = [1] * len(control_points)
+            bounds = [(0, 20) for _ in control_points]
+
+            result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
+            optimal_weights = result.x
+
+            curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+            curve_points = np.array(list(curve_points_gen)) 
+            previous_values_2['curve_fpr'] = curve_points[:,0]
+            previous_values_2['curve_tpr'] = curve_points[:,1]
     else:
         return go.Figure(), "", 0.5, True, '', '', '', '', '', '', '', '', ''
 
     if (not np.array_equal(predictions, previous_values_2['predictions']) or not np.array_equal(true_labels, previous_values_2['true_labels'])) or (trigger_id in ['disease-mean-slider-2', 'disease-std-slider-2', 'healthy-mean-slider-2', 'healthy-std-slider-2']):
         
         if trigger_id in ['disease-mean-slider-2', 'disease-std-slider-2', 'healthy-mean-slider-2', 'healthy-std-slider-2']:
-            print(trigger_id)
+            # print(trigger_id)
             np.random.seed(123)
             true_labels = np.random.choice([0, 1], 1000)
             predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
@@ -463,364 +533,251 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             previous_values_2['fpr'] = fpr
             previous_values_2['tpr'] = tpr
             previous_values_2['thresholds'] = thresholds
+        else:
+            fpr, tpr, thresholds = roc_curve(true_labels, predictions)
+            auc = roc_auc_score(true_labels, predictions)
+            # Creating the dataframe
+            modelTest = pd.DataFrame({
+                'tpr': tpr,
+                'fpr': fpr,
+                'thresholds': thresholds
+            })
+            previous_values_2['predictions'] = predictions
+            previous_values_2['true_labels'] = true_labels
+            previous_values_2['fpr'] = fpr
+            previous_values_2['tpr'] = tpr
+            previous_values_2['thresholds'] = thresholds
 
-        # outer_idx = max_relative_slopes(fpr, tpr)[1]
-        # outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
-        # u_roc_fpr_fitted, u_roc_tpr_fitted = fpr[outer_idx], tpr[outer_idx]
-        # u_roc_fpr_fitted, u_roc_tpr_fitted = deduplicate_roc_points(u_roc_fpr_fitted, u_roc_tpr_fitted)
+        #bezier to find optimal point
+        outer_idx = max_relative_slopes(previous_values_2['fpr'], previous_values_2['tpr'])[1]
+        outer_idx = clean_max_relative_slope_index(outer_idx, len(previous_values_2['tpr']))
+        u_roc_fpr_fitted, u_roc_tpr_fitted = previous_values_2['fpr'][outer_idx], previous_values_2['tpr'][outer_idx]
+        u_roc_fpr_fitted, u_roc_tpr_fitted = deduplicate_roc_points(u_roc_fpr_fitted, u_roc_tpr_fitted)
 
-        # control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
-        # empirical_points = list(zip(fpr, tpr))
-        # initial_weights = [1] * len(control_points)
-        # bounds = [(0, 20) for _ in control_points]
+        control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
+        empirical_points = list(zip(previous_values_2['fpr'], previous_values_2['tpr']))
+        initial_weights = [1] * len(control_points)
+        bounds = [(0, 20) for _ in control_points]
 
-        # result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
-        # optimal_weights = result.x
+        result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
+        optimal_weights = result.x
 
-        # curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
-        # curve_points = np.array(list(curve_points_gen)) 
+        curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+        curve_points = np.array(list(curve_points_gen)) 
+        previous_values_2['curve_fpr'] = curve_points[:,0]
+        previous_values_2['curve_tpr'] = curve_points[:,1]
 
-        previous_values_2['predictions'] = predictions
-        previous_values_2['true_labels'] = true_labels
-        previous_values_2['fpr'] = fpr
-        previous_values_2['tpr'] = tpr
-        previous_values_2['thresholds'] = thresholds
-
-        # previous_values_2['curve_fpr'] = curve_points[:,0]
-        # previous_values_2['curve_tpr'] = curve_points[:,1]
     else:
-        fpr = previous_values_2['fpr']
-        tpr = previous_values_2['tpr']
-        thresholds = previous_values_2['thresholds']
+        
+        predictions = previous_values_2['predictions'] 
+        true_labels = previous_values_2['true_labels'] 
+        curve_fpr = previous_values_2['curve_fpr']
+        curve_tpr = previous_values_2['curve_tpr']
+        # print(f'curve fpr: {curve_fpr} and tpr {curve_tpr}')
+        curve_points = list(zip(curve_fpr, curve_tpr))
+
+        fpr, tpr, thresholds = roc_curve(true_labels, predictions)
+        auc = roc_auc_score(true_labels, predictions)
+        if data_type == 'imported':
+            thresholds = cleanThresholds(thresholds)
+        
+        thresholds = np.where(thresholds > 5, 5, thresholds)
         # Creating the dataframe
         modelTest = pd.DataFrame({
             'tpr': tpr,
             'fpr': fpr,
             'thresholds': thresholds
         })
-        # curve_fpr = previous_values_2['curve_fpr']
-        # curve_tpr = previous_values_2['curve_tpr']
-        # curve_points = list(zip(curve_fpr, curve_tpr))
+
+        previous_values_2['fpr'] = fpr
+        previous_values_2['tpr'] = tpr
+        previous_values_2['thresholds'] = thresholds
 
     if not ctx.triggered or trigger_id == 'initial-interval-2':
-        # slider_cutoff = 0.5
+        #find optimal point using bezier
+        slider_cutoff = 0.5
         # tpr_value = np.sum((np.array(true_labels) == 1) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 1)
         # fpr_value = np.sum((np.array(true_labels) == 0) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 0)
         cutoff = slider_cutoff
         # tpr_value_optimal_pt = 0.5
         # fpr_value_optimal_pt = 0.5
-        # cutoff_optimal_pt = 0.5
+        cutoff_optimal_pt = 0.5
 
-        # H = uTN - uFP
-        # B = uTP - uFN + 0.000000001
-        # HoverB = H/B
-        # slope_of_interest = HoverB * (1 - 0.5) / 0.5
-
-        # cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
-
-        # closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
-        # original_tpr, original_fpr, index = find_closest_pair_separate(tpr, fpr, closest_tpr, closest_fpr)
-        # closest_prob_cutoff = thresholds[index]
-
-        # tpr_value_optimal_pt = original_tpr
-        # fpr_value_optimal_pt = original_fpr
-        # cutoff_optimal_pt = closest_prob_cutoff
         H = uTN - uFP
         B = uTP - uFN + 0.000000001
         HoverB = H/B
+        slope_of_interest = HoverB * (1 - 0.5) / 0.5
+        # print(f'slope_of_interest is {slope_of_interest}')
+        cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
+        # print(curve_points)
+        closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
+        # print(modelTest)
+        # print(f'closest: {closest_fpr} and {closest_tpr}')
+        original_tpr, original_fpr, index = find_closest_pair_separate(modelTest['tpr'], modelTest['fpr'], closest_tpr, closest_fpr)
+        closest_prob_cutoff = modelTest['thresholds'][index]
+
+        # tpr_value_optimal_pt = original_tpr
+        # fpr_value_optimal_pt = original_fpr
+        cutoff_optimal_pt = closest_prob_cutoff
+        # print(cutoff_optimal_pt)
+        #apar calculations
+        cutoff = slider_cutoff
+        H = uTN - uFP
+        B = uTP - uFN + 0.000000001
+        HoverB = H/B 
+        slope_of_interest = HoverB * (1 - 0.5) / 0.5
+        # HoverB = 0.5
         
-        pLs, pStars, pUs = modelPriorsOverRoc(modelTest, uTN, uTP, uFN, uFP, 0)
+        pLs, pStars, pUs = modelPriorsOverRoc(modelTest, uTN, uTP, uFN, uFP, 0, HoverB)
         thresholds = np.array(modelTest['thresholds'])
         thresholds = np.array(thresholds)
-        thresholds = np.where(thresholds > 1, 1, thresholds)
-        print(thresholds)
-        thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
-    else:
-        if trigger_id in ['uTP-slider-2', 'uFP-slider-2', 'uTN-slider-2', 'uFN-slider-2', 'pD-slider-2', 'disease-mean-slider-2', 'disease-std-slider-2', 'healthy-mean-slider-2', 'healthy-std-slider-2']:
-            H = uTN - uFP
-            B = uTP - uFN + 0.000000001
-            HoverB = H/B
-            # slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
-
-            pLs, pStars, pUs = modelPriorsOverRoc(modelTest, uTN, uTP, uFN, uFP, 0)
-            thresholds = np.array(modelTest['thresholds'])
-            thresholds = np.array(thresholds)
+        if data_type == 'imported':
             thresholds = np.where(thresholds > 1, 1, thresholds)
-            thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
-            # cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
+        # print(thresholds)
+        thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+        previous_values_2['thresholds'] = thresholds
+        previous_values_2['pLs'] = pLs
+        previous_values_2['pUs'] = pUs
+        selected_cutoff = cutoff
 
-            # closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
-            # original_tpr, original_fpr, index = find_closest_pair_separate(tpr, fpr, closest_tpr, closest_fpr)
-            # closest_prob_cutoff = thresholds[index]
+        # print(modelTest)
+        # print(f'min pU is {min(pUs)}')
 
-            # tpr_value_optimal_pt = original_tpr
-            # fpr_value_optimal_pt = original_fpr
-            # cutoff_optimal_pt = closest_prob_cutoff
+    else:
+        if trigger_id in ['cutoff-slider-2']:
+            # print(trigger_id)
+            HoverB = H/B
+            slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
 
-            # tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
-            # fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
-            cutoff = slider_cutoff
-        # elif trigger_id == 'roc-plot-2' and click_data:
-        #     x = click_data['points'][0]['x']
-        #     y = click_data['points'][0]['y']
-        #     distances = np.sqrt((fpr - x) ** 2 + (tpr - y) ** 2)
-        #     closest_idx = np.argmin(distances)
-        #     fpr_value = fpr[closest_idx]
-        #     tpr_value = tpr[closest_idx]
-        #     cutoff = thresholds[closest_idx]
-        #     slider_cutoff = cutoff
-            
-        #     H = uTN - uFP
-        #     B = uTP - uFN + 0.000000001
-        #     HoverB = H/B
-        #     slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
-        #     cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
-
-        #     closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
-        #     original_tpr, original_fpr, index = find_closest_pair_separate(tpr, fpr, closest_tpr, closest_fpr)
-        #     closest_prob_cutoff = thresholds[index]
-
-        #     tpr_value_optimal_pt = original_tpr
-        #     fpr_value_optimal_pt = original_fpr
-        #     cutoff_optimal_pt = closest_prob_cutoff
+            selected_cutoff = slider_cutoff
+            thresholds = previous_values_2['thresholds']
+            pLs = previous_values_2['pLs']
+            pUs = previous_values_2['pUs']
+            cutoff_optimal_pt = previous_values_2['cutoff_optimal_pt']
         else:
-            return dash.no_update
+            
+            if trigger_id in ['{"index":2,"type":"upload-data"}', 'uTP-slider-2', 'uFP-slider-2', 'uTN-slider-2', 'uFN-slider-2', 'pD-slider-2', 'disease-mean-slider-2', 'disease-std-slider-2', 'healthy-mean-slider-2', 'healthy-std-slider-2']:
+                # print(trigger_id)
+                H = uTN - uFP
+                B = uTP - uFN + 0.000000001
+                HoverB = H/B
+                slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+                
+                #bezier optimal point
+                cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
 
-    # roc_fig = go.Figure()
-    # roc_fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC Curve', line=dict(color='blue')))
-    # roc_fig.add_trace(go.Scatter(x=[fpr_value], y=[tpr_value], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
-    # roc_fig.add_trace(go.Scatter(x=[fpr_value_optimal_pt], y=[tpr_value_optimal_pt], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
+                closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
+                original_tpr, original_fpr, index = find_closest_pair_separate(previous_values_2['tpr'], previous_values_2['fpr'], closest_tpr, closest_fpr)
+                closest_prob_cutoff = thresholds[index]
 
-    # roc_fig.update_layout(
-    #     title={
-    #         'text': 'Receiver Operating Characteristic (ROC) Curve',
-    #         'x': 0.5,
-    #         'xanchor': 'center'
-    #     },
-    #     xaxis_title='False Positive Rate (FPR)',
-    #     yaxis_title='True Positive Rate (TPR)',
-    #     template='plotly_white',
-    #     annotations=[
-    #     dict(
-    #         x=0.95,
-    #         y=0.05,
-    #         xref='paper',
-    #         yref='paper',
-    #         text=f'AUC = {auc:.3f}',
-    #         showarrow=False,
-    #         font=dict(
-    #             size=12,
-    #             color='black'
-    #         ),
-    #         align='right',
-    #         bgcolor='white',
-    #         bordercolor='black',
-    #         borderwidth=1
-    #     )
-    # ]
-    # )
+                # tpr_value_optimal_pt = original_tpr
+                # fpr_value_optimal_pt = original_fpr
+                cutoff_optimal_pt = closest_prob_cutoff
+                # print(f'optimal point cutoff:{cutoff_optimal_pt}')
+                predictions = np.array(predictions)
+
+                # tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
+                # fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
+                cutoff = slider_cutoff
+
+                # print(f'h is {H}; b is {B}')
+                # slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+
+                # HoverB = 0.5
+
+                pLs, pStars, pUs = modelPriorsOverRoc(modelTest, uTN, uTP, uFN, uFP, 0, HoverB)
+                thresholds = np.array(modelTest['thresholds'])
+                thresholds = np.array(thresholds)
+                if data_type == 'imported':
+                    thresholds = np.where(thresholds > 1, 1, thresholds)
+                thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+                
+                # print(pLs)
+                # if(pLs is None or pUs is None):
+                #     return go.Figure(), "", 0.5, True, '', '', '', '', '', '', '', '', ''
+
+                selected_cutoff = slider_cutoff
+
+                # print(f'min pU is {min(pUs)}')
+
+                previous_values_2['thresholds'] = thresholds
+                previous_values_2['pLs'] = pLs
+                previous_values_2['pUs'] = pUs
+                previous_values_2['cutoff_optimal_pt'] = cutoff_optimal_pt
+
+                
+                
+            else:
+                return dash.no_update
 
     disease_m_text = f"Disease Mean: {disease_mean:.2f}"
     disease_sd_text = f"Disease Standard Deviation: {disease_std:.2f}"
     healthy_m_text = f"Healthy Mean: {healthy_mean:.2f}"
-    healthy_sd_text = f"Disease Standard Deviation: {healthy_std:.2f}"
-    cutoff_text = f"Raw Cutoff: {cutoff:.2f}" if data_type != 'imported' else f"Probability cutoff: {cutoff:.2f}"
+    healthy_sd_text = f"Healthy Standard Deviation: {healthy_std:.2f}"
+    cutoff_text = f"Raw Cutoff: {selected_cutoff:.2f}" if data_type != 'imported' else f"Probability cutoff: {selected_cutoff:.2f}"
     utp_text = f"Utility of true positive (uTP): {uTP:.2f}"
     ufp_text = f"Utility of false positive (uFP): {uFP:.2f}"
     utn_text = f"Utility of true negative (uTN): {uTN:.2f}"
-    ufn_text = f"Utility of false negative (uFN):: {uFN:.2f}"
-    pDisease_text = f"Disease Prevalence:: {pD:.2f}"
-    # optimal_cutoff_text = f"H/B of {HoverB:.2f} gives a slope of {slope_of_interest:.2f} at the optimal cutoff point {cutoff_optimal_pt:.2f}"
-
-    # p_values = np.linspace(0, 1, 100)
-    # line1 = p_values * uTP + (1 - p_values) * uFP
-    # line2 = p_values * uFN + (1 - p_values) * uTN
-    # line3 = p_values * tpr_value * uTP + p_values * (1 - tpr_value) * uFN + (1 - p_values) * fpr_value * uFP + (1 - p_values) * (1-fpr_value) * uTN
-    # line4 = p_values * tpr_value_optimal_pt * uTP + p_values * (1 - tpr_value_optimal_pt) * uFN + (1 - p_values) * fpr_value_optimal_pt * uFP + (1 - p_values) * (1-fpr_value_optimal_pt) * uTN
-
-
-    # xVar = sy.symbols('xVar')
-    # #solve for upper threshold formed by test and treat all
-    # pU = sy.solve(treatAll(xVar, uFP, uTP) - test(xVar, tpr_value, 1-fpr_value, uTN, uTP, uFN, uFP, 0), xVar)
-
-    # #solve for treatment threshold formed by treat all and treat none
-    # pStar = sy.solve(treatAll(xVar, uFP, uTP) - treatNone(xVar, uFN, uTN), xVar)
-    
-    # #solve for lower threshold formed by treat none and test
-    # pL = sy.solve(treatNone(xVar, uFN, uTN) - test(xVar, tpr_value, 1-fpr_value, uTN, uTP, uFN, uFP, 0), xVar)
+    ufn_text = f"Utility of false negative (uFN): {uFN:.2f}"
+    pDisease_text = f"Disease Prevalence: {pD:.2f}"
+    optimal_cutoff_text = f"H/B of {HoverB:.2f} gives a slope of {slope_of_interest:.2f} at the optimal cutoff point {cutoff_optimal_pt:.2f}"
 
     # Create the figure
     apar_fig = go.Figure()
 
     apar_fig.add_trace(go.Scatter(
-        x=thresholds[::-10],
-        y=pUs[::-10],
+        x=thresholds,
+        y=pUs,
         mode='lines',
         name='pUs',
         line=dict(color='blue')
     ))
 
     apar_fig.add_trace(go.Scatter(
-        x=thresholds[::-10],
-        y=pLs[::-10],
+        x=thresholds,
+        y=pLs,
         mode='lines',
         name='pLs',
         line=dict(color='orange')
     ))
+    
+    # Add a vertical line at cutoff
+    apar_fig.add_trace(go.Scatter(
+        x=[selected_cutoff, selected_cutoff],  # Same x value for both points to create a vertical line
+        y=[0, 1],  # Full height of the y-axis
+        mode='lines',
+        line=dict(color='green', width=2, dash='dash'),
+        name="Selected threshold"
+    ))
 
-    # # Add a vertical line at the cutoff value
-    # apar_fig.add_trace(go.Scatter(
-    #     x=[slider_cutoff, slider_cutoff],
-    #     y=[0, 1],
-    #     mode='lines',
-    #     line=dict(color='red', width=2, dash='dash'),
-    #     name='Cutoff Line'
-    # ))
+    # Add annotations to label each line at the bottom of the graph
+    apar_fig.add_annotation(
+        x=selected_cutoff,
+        y=0,
+        xref="x",
+        yref="y",
+        text="Cutoff",
+        showarrow=False,
+        yshift=-10,
+        textangle=0
+    )
 
     apar_fig.update_layout(
-        title='Applicable Area',
+        title={
+            'text': 'Applicable Area',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
         xaxis_title='Probability Cutoff Threshold',
         yaxis_title='Prior Probability (Prevalence)',
-        xaxis=dict(tickmode='array', tickvals=np.arange(min(thresholds), max(thresholds), step=0.1)),
+        xaxis=dict(tickmode='array', tickvals=np.arange(round(min(thresholds), 1), min(round(max(thresholds), 1), 5), step=0.1)),
         yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
         template='plotly_white'
     )
 
-    # utility_fig = go.Figure()
-    # utility_fig.add_trace(go.Scatter(x=p_values, y=line1, mode='lines', name='Treat All', line=dict(color='green')))
-    # utility_fig.add_trace(go.Scatter(x=p_values, y=line2, mode='lines', name='Treat None', line=dict(color='orange')))
-    # utility_fig.add_trace(go.Scatter(x=p_values, y=line3, mode='lines', name='Test', line=dict(color='blue')))
-    # utility_fig.add_trace(go.Scatter(x=p_values, y=line4, mode='lines', name='Optimal Cutoff', line=dict(color='red')))
-
-    # # Add a vertical line at x = pL
-    # utility_fig.add_trace(go.Scatter(
-    #     x=[float(pL[0]), float(pL[0])],  # Same x value for both points to create a vertical line
-    #     y=[0, 1],  # Full height of the y-axis
-    #     mode='lines',
-    #     line=dict(color='orange', width=2, dash='dash'),
-    #     name="pL Treat-none/Test threshold"
-    # ))
-
-    # # Add a vertical line at x = pStar
-    # utility_fig.add_trace(go.Scatter(
-    #     x=[float(pStar[0]), float(pStar[0])],  # Same x value for both points to create a vertical line
-    #     y=[0, 1],  # Full height of the y-axis
-    #     mode='lines',
-    #     line=dict(color='black', width=2, dash='dash'),
-    #     name="pStar Treatment threshold"
-    # ))
-
-    # # Add a vertical line at x = pU
-    # utility_fig.add_trace(go.Scatter(
-    #     x=[float(pU[0]), float(pU[0])],  # Same x value for both points to create a vertical line
-    #     y=[0, 1],  # Full height of the y-axis
-    #     mode='lines',
-    #     line=dict(color='green', width=2, dash='dash'),
-    #     name="pU Test/Treat threshold"
-    # ))
-
-    # # Add annotations to label each line at the bottom of the graph
-    # utility_fig.add_annotation(
-    #     x=float(pL[0]),
-    #     y=0,
-    #     xref="x",
-    #     yref="y",
-    #     text="pL",
-    #     showarrow=False,
-    #     yshift=-10,
-    #     textangle=0
-    # )
-
-    # utility_fig.add_annotation(
-    #     x=float(pStar[0]),
-    #     y=0,
-    #     xref="x",
-    #     yref="y",
-    #     text="pStar",
-    #     showarrow=False,
-    #     yshift=-10,
-    #     textangle=0
-    # )
-
-    # utility_fig.add_annotation(
-    #     x=float(pU[0]),
-    #     y=0,
-    #     xref="x",
-    #     yref="y",
-    #     text="pU",
-    #     showarrow=False,
-    #     yshift=-10,
-    #     textangle=0
-    # )
-    
-    # utility_fig.update_layout(
-    #     title={
-    #         'text': 'Expected Utility Plot for treat all, treat none, and test',
-    #         'x': 0.5,
-    #         'xanchor': 'center'
-    #     },
-    #     xaxis_title='Probability of Disease (p)',
-    #     yaxis_title='Expected Utility',
-    #     template='plotly_white',
-    # )
-
-    # if data_type == 'imported' and upload_contents or (upload_contents and trigger_id == 'imported-interval-2'):
-    #     distribution_fig = go.Figure()
-    #     distribution_fig.add_trace(go.Histogram(x=predictions, name='Diseased', opacity=0.75, marker=dict(color='grey')))
-    #     distribution_fig.add_shape(
-    #         type="line",
-    #         x0=slider_cutoff,
-    #         y0=0,
-    #         x1=slider_cutoff,
-    #         y1=1,
-    #         line=dict(color="blue", width=2, dash="dash"),
-    #         name='Cutoff Line'
-    #     )
-    #     distribution_fig.update_layout(
-    #         title={
-    #             'text': 'Probability Distributions',
-    #             'x': 0.5,
-    #             'xanchor': 'center'
-    #         },
-    #         xaxis_title='Value',
-    #         yaxis_title='Count',
-    #         barmode='overlay',
-    #         template='plotly_white',
-    #     )
-    # else:
-    #     x_values = np.linspace(-10, 10, 1000)
-    #     diseased_pdf = norm.pdf(x_values, disease_mean, disease_std)
-    #     healthy_pdf = norm.pdf(x_values, healthy_mean, healthy_std)
-
-    #     distribution_fig = go.Figure()
-    #     distribution_fig.add_trace(go.Scatter(x=x_values, y=diseased_pdf, mode='lines', name='Diseased', line=dict(color='red')))
-    #     distribution_fig.add_trace(go.Scatter(x=x_values, y=healthy_pdf, mode='lines', name='Healthy', line=dict(color='green')))
-    #     distribution_fig.add_shape(
-    #         type="line",
-    #         x0=slider_cutoff,
-    #         y0=0,
-    #         x1=slider_cutoff,
-    #         y1=max(max(diseased_pdf), max(healthy_pdf))*1.1,
-    #         line=dict(color="blue", width=2, dash="dash"),
-    #         name='Cutoff Line'
-    #     )
-    #     distribution_fig.update_layout(
-    #         title={
-    #             'text': 'Diseased vs Healthy Distribution',
-    #             'x': 0.5,
-    #             'xanchor': 'center'
-    #         },
-    #         xaxis_title='Value',
-    #         yaxis_title='Count',
-    #         template='plotly_white',
-    #     )
-
-
-
-
     initial_interval_disabled = initial_intervals >= 1
 
-    return (apar_fig, cutoff_text, slider_cutoff,
+    return (apar_fig, cutoff_text, selected_cutoff, optimal_cutoff_text,
              initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
                  utp_text, ufp_text, utn_text, ufn_text, pDisease_text)

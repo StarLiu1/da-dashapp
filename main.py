@@ -16,7 +16,7 @@ app.layout = html.Div([
 def display_page(pathname):
     if pathname == '/':
         return rocupda.layout
-    elif pathname == '/page-2':
+    elif pathname == '/apar':
         return page2.layout
 
     else:

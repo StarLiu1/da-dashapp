@@ -111,7 +111,7 @@ def pLpStarpUThresholds(sens, spec, uTN, uTP, uFN, uFP, u):
 
     return [pL, pStar, pU]
 
-def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u):
+def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB):
     """
     Collects all the lower, pStar, and upper thresholds for every point on the ROC curve
     
@@ -131,6 +131,8 @@ def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u):
     pStars = []
     pUs = []
     
+    # uFP = uTN - (uTP - uFN) * HoverB
+
     # get TPRs and FPRs from the model
     if(type(np.array(modelChosen['tpr'])) == list):
         tprArray = np.array(np.array(modelChosen['tpr'])[0])
@@ -275,7 +277,7 @@ def adjustpLpUClassificationThreshold(thresholds, pLs, pUs):
         pUs[0] = pUs[1]
         pLs = np.append([0], pLs)
         pUs = np.append([0], pUs)
-    thresholds = thresholds[::-1]
+    # thresholds = thresholds[::-1]
     return [thresholds, pLs, pUs]
 
 def eqLine(x, x0, x1, y0, y1):
@@ -342,7 +344,7 @@ def applicableArea(modelRow, thresholds, utils, p, HoverB):
     #calculate pLs, pStars, and pUs
 #     uFP = uTN - (uTP - uFN) * (1 / modelRow['costRatio'])
 #     HoverB = (1 / costRatio)
-    uFP = uTN - (uTP - uFN) * HoverB
+    # uFP = uTN - (uTP - uFN) * HoverB
     pLs, pStars, pUs = modelPriorsOverRoc(modelRow, uTN, uTP, uFN, uFP, u)
     
     #modify the classification thresholds
