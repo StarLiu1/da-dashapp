@@ -230,7 +230,7 @@ def update_input_fields(data_type):
             # ConfirmDialog for the popup
             dcc.ConfirmDialog(
                 id='upload-popup',
-                message='The data has been successfully uploaded. Please wait 3 seconds and select a cutoff to get started.',
+                message='Data uploaded. Graphics loading...',
                 displayed=False,  # Initially hidden
             ),
             
