@@ -112,8 +112,8 @@ layout = html.Div([
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
+        html.Button('Toggle Line Drawing Mode', id='toggle-drawing-mode', n_clicks=0),
         dcc.Graph(id='roc-plot', config={'displayModeBar': True}, style={'width': '33%'}),
-        # dcc.Graph(id='roc-plot', config={'editable': True, 'modeBarButtonsToAdd': ['drawline'], 'displayModeBar': True}, style={'width': '33%'}),
         html.Div(id='roc-plot-info'),
 
         dcc.Graph(id='utility-plot', config={'displayModeBar': True}, style={'width': '37%'}),
@@ -134,7 +134,7 @@ layout = html.Div([
     dcc.Store(id='hm-value'),
     dcc.Store(id='hsd-value'),
     dcc.Store(id='roc-store'),
-    html.Script(src='/assets/custom.js')
+    dcc.Store(id='drawing-mode', data=False)
 ])
 
 @app.callback(
@@ -357,6 +357,85 @@ def handle_uploaded_data(n_intervals, current_intervals):
         return html.Div(), True, 0
     return html.Div(), True, current_intervals
 
+@app.callback(
+    Output('drawing-mode', 'data'),
+    Input('toggle-drawing-mode', 'n_clicks'),
+    State('drawing-mode', 'data')
+)
+def toggle_drawing_mode(n_clicks, current_mode):
+    # Toggle the drawing mode on button click
+    if n_clicks == 0:
+        return False
+    else:
+        return not current_mode
+
+
+def create_roc_plot(fpr, tpr, shapes=None):
+    roc_fig = go.Figure()
+
+    roc_fig.add_trace(go.Scatter(
+        x=fpr,
+        y=tpr,
+        mode='lines',
+        name='ROC Curve',
+        line=dict(color='blue')
+    ))
+
+    roc_fig.update_layout(
+        title='ROC Curve',
+        xaxis_title='False Positive Rate',
+        yaxis_title='True Positive Rate',
+        template='plotly_white',
+        dragmode='drawline',  # Enable drawing mode for lines
+        editable=True,  # Allow editing of shapes
+        shapes=shapes if shapes else [],  # Add shapes if provided
+    )
+
+    return roc_fig
+
+
+
+@app.callback(
+    Output('roc-plot', 'figure'),
+    Output('roc-plot-info', 'children'),
+    Input('roc-plot', 'relayoutData'),  # Capture relayout events (e.g., drawing lines)
+    State('roc-store', 'data'),  # Access stored fpr and tpr data
+    State('roc-plot', 'figure'),
+    State('drawing-mode', 'data'),  # Check if drawing mode is active
+    prevent_initial_call=True
+)
+def update_roc_on_relayout(relayoutData, roc_data, current_figure, drawing_mode):
+    if not relayoutData or not roc_data or not drawing_mode:
+        return dash.no_update
+
+    fpr = np.array(roc_data['fpr'])
+    tpr = np.array(roc_data['tpr'])
+
+    # Handle relayoutData for drawing or dragging lines
+    if 'shapes' in relayoutData:
+        current_figure['layout']['shapes'] = relayoutData['shapes']
+
+        if len(current_figure['layout']['shapes']) == 2:
+            x0 = current_figure['layout']['shapes'][0]['x0']
+            x1 = current_figure['layout']['shapes'][1]['x0']
+
+            if x0 > x1:
+                x0, x1 = x1, x0
+
+            indices = np.where((fpr >= x0) & (fpr <= x1))
+            filtered_fpr = fpr[indices]
+            filtered_tpr = tpr[indices]
+
+            partial_auc = np.trapz(filtered_tpr, filtered_fpr)
+            info_text = f"Partial AUC between FPR {x0:.2f} and {x1:.2f} is {partial_auc:.4f}"
+        else:
+            info_text = "Draw two lines to calculate partial AUC."
+
+        return create_roc_plot(fpr, tpr, current_figure['layout']['shapes']), info_text
+
+    return dash.no_update
+
+
 
 previous_values = {
     'predictions': [0, 0, 0],
@@ -371,7 +450,7 @@ previous_values = {
 imported = False
 
 @app.callback(
-    [Output('roc-plot', 'figure'), 
+    [Output('roc-plot', 'figure', allow_duplicate=True), 
      Output('cutoff-value', 'children'), 
      Output('cutoff-slider', 'value'), 
      Output('optimalcutoff-value', 'children'), 
@@ -387,8 +466,7 @@ imported = False
      Output('utn-value', 'children'), 
      Output('ufn-value', 'children'), 
      Output('pd-value', 'children'), 
-     Output('roc-store', 'data')
-     ],
+     Output('roc-store', 'data')],
     [Input('cutoff-slider', 'value'), 
      Input('roc-plot', 'clickData'), 
      Input('uTP-slider', 'value'), 
@@ -403,12 +481,19 @@ imported = False
      Input('healthy-mean-slider', 'value'), 
      Input('healthy-std-slider', 'value'),
      Input('initial-interval', 'n_intervals')],
-    [State('roc-plot', 'figure')],
+    [State('roc-plot', 'figure'),
+     State('drawing-mode', 'data')],  # Adding the drawing mode state
     prevent_initial_call='initial_duplicate'
 )
-def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, initial_intervals, figure):
+def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, initial_intervals, figure, drawing_mode):
     ctx = dash.callback_context
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    # print(drawing_mode)
+    # Check if drawing mode is active
+    if drawing_mode and trigger_id != 'initial-interval':
+        # drawing_mode = False
+        return dash.no_update  # Prevent drawing a point if in drawing mode
+    # drawing_mode = False
 
     if trigger_id == 'initial-interval':
         if initial_intervals == 0:
