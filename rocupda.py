@@ -113,6 +113,9 @@ layout = html.Div([
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
         dcc.Graph(id='roc-plot', config={'displayModeBar': True}, style={'width': '33%'}),
+        # dcc.Graph(id='roc-plot', config={'editable': True, 'modeBarButtonsToAdd': ['drawline'], 'displayModeBar': True}, style={'width': '33%'}),
+        html.Div(id='roc-plot-info'),
+
         dcc.Graph(id='utility-plot', config={'displayModeBar': True}, style={'width': '37%'}),
     ], style={'display': 'flex', 'width': '100%'}),
     html.Div([
@@ -130,8 +133,8 @@ layout = html.Div([
     dcc.Store(id='dsd-value'),
     dcc.Store(id='hm-value'),
     dcc.Store(id='hsd-value'),
-    # Store the dataframe in dcc.Store
-    # dcc.Store(id='model-test-store', storage_type='session'),
+    dcc.Store(id='roc-store'),
+    html.Script(src='/assets/custom.js')
 ])
 
 @app.callback(
@@ -384,7 +387,7 @@ imported = False
      Output('utn-value', 'children'), 
      Output('ufn-value', 'children'), 
      Output('pd-value', 'children'), 
-    #  Output('model-test-store', 'data')
+     Output('roc-store', 'data')
      ],
     [Input('cutoff-slider', 'value'), 
      Input('roc-plot', 'clickData'), 
@@ -796,8 +799,11 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         'fpr': fpr,
         'thresholds': thresholds
     })
-    # Convert dataframe to JSON for storage in dcc.Store
-    modelTest_json = modelTest.to_json(date_format='iso', orient='split')
+    #store roc data for partial roc calculation
+    roc_data = {
+        'fpr': fpr.tolist(),  # Convert to list to ensure JSON serializability
+        'tpr': tpr.tolist()
+    }
 
     # print(modelTest_json)
     initial_interval_disabled = initial_intervals >= 1
@@ -805,7 +811,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
              utility_fig, distribution_fig, initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
-                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text)#, modelTest_json)
+                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data)#, modelTest_json)
 
 
 @app.callback(
