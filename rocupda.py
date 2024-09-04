@@ -306,28 +306,6 @@ def parse_contents(contents = "true_labels,predictions"):
         return None
     return df
 
-# @app.callback(
-#     Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
-#     Output({'type': 'interval-component', 'index': MATCH}, 'disabled'),
-#     Output({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
-#     Input({'type': 'upload-data', 'index': MATCH}, 'contents'),
-#     Input({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
-#     State({'type': 'interval-component', 'index': MATCH}, 'n_intervals'),
-#     prevent_initial_call=True
-# )
-# def handle_uploaded_data(contents, n_intervals, current_intervals):
-#     if contents and n_intervals == 0:
-#         df = parse_contents(contents)
-#         return (html.Div([
-#                     html.H5('Uploaded Data:'),
-#                     html.P(f'{df.shape[0]} rows, {df.shape[1]} columns. Please select a cutoff to get started...'),
-#                 ]),
-#                 False, 0)
-#     elif n_intervals > 0:
-#         return html.Div(), True, 0
-#     return html.Div(), True, current_intervals
-
-
 @app.callback(
     Output('upload-popup', 'displayed'),
     Input({'type': 'upload-data', 'index': 0}, 'contents'),
@@ -401,164 +379,6 @@ def create_roc_plot(fpr, tpr, shapes=None):
     )
 
     return roc_fig
-
-
-
-
-
-
-# @app.callback(
-#     Output('roc-plot', 'figure'),
-#     Output('roc-plot-info', 'children'),
-#     Input('roc-plot', 'relayoutData'),  # Capture relayout events (e.g., drawing lines)
-#     State('roc-store', 'data'),  # Access stored fpr and tpr data
-#     State('roc-plot', 'figure'),
-#     State('drawing-mode', 'data'),  # Check if drawing mode is active
-#     prevent_initial_call=True
-# )
-# def update_roc_on_relayout(relayoutData, roc_data, current_figure, drawing_mode):
-#     if not roc_data:
-#         return dash.no_update
-
-#     fpr = np.array(roc_data['fpr'])
-#     tpr = np.array(roc_data['tpr'])
-
-#     if 'shapes' in relayoutData:
-#         current_figure['layout']['shapes'] = relayoutData['shapes']
-
-#         if len(current_figure['layout']['shapes']) == 2:
-#             x0 = current_figure['layout']['shapes'][0]['x0']
-#             x1 = current_figure['layout']['shapes'][1]['x0']
-
-#             if x0 > x1:
-#                 x0, x1 = x1, x0
-
-#             # Find the indices of the region bounded by the lower TPR and upper FPR
-#             indices = np.where((fpr >= x0) & (fpr <= x1))[0]
-
-#             # Filter the TPRs within this FPR range
-#             filtered_fpr = fpr[indices]
-#             filtered_tpr = tpr[indices]
-
-#             # Calculate the minimum TPR within this region
-#             min_tpr = min(filtered_tpr)
-#             max_tpr = max(filtered_tpr)
-
-#             # Further filter to only include points where TPR >= min_tpr
-#             region_indices = np.where(filtered_tpr >= min_tpr)[0]
-#             region_fpr = filtered_fpr[region_indices]
-#             region_tpr = filtered_tpr[region_indices]
-
-
-#             # Define the bounds for the rectangle
-#             rect_area = (max(filtered_fpr)) * (1 - min_tpr)
-
-#             # Calculate the partial AUC using the trapezoidal rule
-#             partial_auc = (np.trapz(region_tpr, region_fpr) - min_tpr * (max(filtered_fpr) - min(filtered_fpr))) / rect_area
-
-            
-
-#             # Normalize the partial AUC by the rectangle area
-#             normalized_partial_auc = partial_auc / rect_area if rect_area > 0 else 0
-
-#             info_text = (
-#                 f"Partial AUC in region bounded by FPR {x0:.2f} to {x1:.2f} and TPR {min_tpr:.2f} to {max_tpr:.2f} "
-#                 f"is {partial_auc:.4f}"
-#             )
-#         else:
-#             info_text = "Draw two lines to calculate partial AUC."
-
-#         return create_roc_plot(fpr, tpr, current_figure['layout']['shapes'], drawing_mode), info_text
-
-#     # If no relayoutData, just return the plot with the current drawing mode
-#     return create_roc_plot(fpr, tpr, current_figure['layout'].get('shapes', []), drawing_mode), dash.no_update
-
-# @app.callback(
-#     Output('roc-plot', 'figure'),
-#     Output('roc-plot-info', 'children'),
-#     Input('roc-plot', 'clickData'),  # Capture click events
-#     State('roc-store', 'data'),  # Access stored fpr and tpr data
-#     State('roc-plot', 'figure'),
-#     prevent_initial_call=True
-# )
-# def update_roc_on_click(click_data, roc_data, current_figure):
-#     if not roc_data:
-#         return dash.no_update
-
-#     fpr = np.array(roc_data['fpr'])
-#     tpr = np.array(roc_data['tpr'])
-
-#     # Initialize shapes if not already present
-#     shapes = current_figure.get('layout', {}).get('shapes', [])
-
-#     if click_data:
-#         x_clicked = click_data['points'][0]['x']
-
-#         # Check if a line at the x-coordinate already exists
-#         line_exists = any(
-#             shape['type'] == 'line' and shape['x0'] == x_clicked and shape['x1'] == x_clicked
-#             for shape in shapes
-#         )
-
-#         if line_exists:
-#             # If line exists, remove it
-#             shapes = [shape for shape in shapes if shape['x0'] != x_clicked]
-#         else:
-#             # Otherwise, add a new line
-#             shapes.append({
-#                 'type': 'line',
-#                 'x0': x_clicked,
-#                 'y0': 0,
-#                 'x1': x_clicked,
-#                 'y1': 1,
-#                 'line': {
-#                     'color': 'red',
-#                     'width': 2,
-#                     'dash': 'dash',
-#                 }
-#             })
-
-#     if len(shapes) == 2:
-#         # Calculate partial AUC if two lines are present
-#         x0 = shapes[0]['x0']
-#         x1 = shapes[1]['x0']
-
-#         if x0 > x1:
-#             x0, x1 = x1, x0
-
-#         # Find the indices of the region bounded by the lower TPR and upper FPR
-#         indices = np.where((fpr >= x0) & (fpr <= x1))[0]
-
-#         # Filter the TPRs within this FPR range
-#         filtered_fpr = fpr[indices]
-#         filtered_tpr = tpr[indices]
-
-#         # Calculate the minimum TPR within this region
-#         min_tpr = min(filtered_tpr)
-#         max_tpr = max(filtered_tpr)
-
-#         # Further filter to only include points where TPR >= min_tpr
-#         region_indices = np.where(filtered_tpr >= min_tpr)[0]
-#         region_fpr = filtered_fpr[region_indices]
-#         region_tpr = filtered_tpr[region_indices]
-
-#         # Define the bounds for the rectangle
-#         rect_area = (max(filtered_fpr)) * (1 - min_tpr)
-
-#         # Calculate the partial AUC using the trapezoidal rule
-#         partial_auc = (np.trapz(region_tpr, region_fpr) - min_tpr * (max(filtered_fpr) - min(filtered_fpr))) / rect_area
-
-#         # Normalize the partial AUC by the rectangle area
-#         normalized_partial_auc = partial_auc / rect_area if rect_area > 0 else 0
-
-#         info_text = (
-#             f"Partial AUC in region bounded by FPR {x0:.2f} to {x1:.2f} and TPR {min_tpr:.2f} to {max_tpr:.2f} "
-#             f"is {partial_auc:.4f}"
-#         )
-#     else:
-#         info_text = "Click to add lines and calculate partial AUC."
-
-#     return create_roc_plot(fpr, tpr, shapes), info_text
 
 
 mode_status = 'simulated'
@@ -651,24 +471,6 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         draw_mode = 'point'
         button_text = 'Switch to Line Mode'
 
-    
-
-    # Determine mode based on button text
-
-
-    # print(trigger_id)
-    # draw_mode = 'line' if 'Line' in button_text else 'point'
-    # button_text = 'Switch to Point Mode' if draw_mode == 'point' else 'Switch to Line Mode'
-    
-    # Handle ROC plot click
-    
-    # print(drawing_mode)
-    # Check if drawing mode is active
-    # if drawing_mode and trigger_id != 'initial-interval':
-    #     # drawing_mode = False
-    #     return dash.no_update  # Prevent drawing a point if in drawing mode
-    # # drawing_mode = False
-
     if trigger_id == 'initial-interval':
         if initial_intervals == 0:
             slider_cutoff = 0.51
@@ -727,16 +529,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         # button_text = 'Switch to Line Mode'
     elif data_type not in ['imported', 'simulated']:
         return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None, '', ''
-    # print(predictions)
-    
-    
-        # print('new suspicion')
-        # fpr = np.array(previous_values['fpr'])
-        # tpr = np.array(previous_values['tpr'])
-        # thresholds = np.array(previous_values['thresholds'])
-        # curve_fpr = previous_values['curve_fpr']
-        # curve_tpr = previous_values['curve_tpr']
-        # curve_points = list(zip(curve_fpr, curve_tpr))
+
     predictions = previous_values['predictions']
     true_labels = previous_values['true_labels']
     fpr = np.array(previous_values['fpr'])
@@ -877,21 +670,11 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 x_clicked = click_data['points'][0]['x']
                 y_clicked = click_data['points'][0]['y']
 
-                # print(x_clicked)
-                # Check if a line at the x-coordinate already exists
-                # line_exists = any(
-                #     shape['type'] == 'line' and shape['x0'] == x_clicked and shape['x1'] == x_clicked
-                #     for shape in shapes
-                # )
-
                 tolerance = 0.02
                 line_exists = any(
                     shape['type'] == 'line' and (abs(shape['x0'] - x_clicked) < tolerance)
                     for shape in shapes
                 )
-                        # shapes = [shape for shape in shapes if abs(shape['x0'] - x_clicked) > tolerance]
-
-
                 # print(f'line_exists is {line_exists}')
                 if line_exists:
                     # If line exists, remove it
@@ -940,9 +723,6 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
                     # Calculate the partial AUC using the trapezoidal rule
                     partial_auc = (np.trapz(region_tpr, region_fpr) - min_tpr * (max(filtered_fpr) - min(filtered_fpr))) / rect_area
-
-                    # # Normalize the partial AUC by the rectangle area
-                    # normalized_partial_auc = partial_auc / rect_area if rect_area > 0 else 0
 
                     info_text = (
                         f"Partial AUC in region bounded by FPR {x0:.2f} to {x1:.2f} and TPR {min_tpr:.2f} to {max_tpr:.2f} "
