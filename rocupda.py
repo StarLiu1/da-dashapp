@@ -112,7 +112,7 @@ layout = html.Div([
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
-        html.Button('Toggle Line Drawing Mode', id='toggle-drawing-mode', n_clicks=0),
+        html.Button('Switch to Line Mode', id='toggle-draw-mode', n_clicks=0),
         dcc.Graph(id='roc-plot', config={'displayModeBar': True}, style={'width': '33%'}),
         html.Div(id='roc-plot-info'),
 
@@ -134,7 +134,7 @@ layout = html.Div([
     dcc.Store(id='hm-value'),
     dcc.Store(id='hsd-value'),
     dcc.Store(id='roc-store'),
-    dcc.Store(id='drawing-mode', data=False)
+    # dcc.Store(id='drawing-mode', data=False)
 ])
 
 @app.callback(
@@ -371,6 +371,17 @@ def toggle_drawing_mode(n_clicks, current_mode):
 
 
 def create_roc_plot(fpr, tpr, shapes=None):
+    """
+    Creates a ROC plot with the given FPR and TPR values.
+
+    Parameters:
+        fpr (array-like): False Positive Rates.
+        tpr (array-like): True Positive Rates.
+        shapes (list): List of shapes (like lines) to add to the plot.
+
+    Returns:
+        go.Figure: The ROC plot as a Plotly figure.
+    """
     roc_fig = go.Figure()
 
     roc_fig.add_trace(go.Scatter(
@@ -386,8 +397,6 @@ def create_roc_plot(fpr, tpr, shapes=None):
         xaxis_title='False Positive Rate',
         yaxis_title='True Positive Rate',
         template='plotly_white',
-        dragmode='drawline',  # Enable drawing mode for lines
-        editable=True,  # Allow editing of shapes
         shapes=shapes if shapes else [],  # Add shapes if provided
     )
 
@@ -395,48 +404,164 @@ def create_roc_plot(fpr, tpr, shapes=None):
 
 
 
-@app.callback(
-    Output('roc-plot', 'figure'),
-    Output('roc-plot-info', 'children'),
-    Input('roc-plot', 'relayoutData'),  # Capture relayout events (e.g., drawing lines)
-    State('roc-store', 'data'),  # Access stored fpr and tpr data
-    State('roc-plot', 'figure'),
-    State('drawing-mode', 'data'),  # Check if drawing mode is active
-    prevent_initial_call=True
-)
-def update_roc_on_relayout(relayoutData, roc_data, current_figure, drawing_mode):
-    if not relayoutData or not roc_data or not drawing_mode:
-        return dash.no_update
-
-    fpr = np.array(roc_data['fpr'])
-    tpr = np.array(roc_data['tpr'])
-
-    # Handle relayoutData for drawing or dragging lines
-    if 'shapes' in relayoutData:
-        current_figure['layout']['shapes'] = relayoutData['shapes']
-
-        if len(current_figure['layout']['shapes']) == 2:
-            x0 = current_figure['layout']['shapes'][0]['x0']
-            x1 = current_figure['layout']['shapes'][1]['x0']
-
-            if x0 > x1:
-                x0, x1 = x1, x0
-
-            indices = np.where((fpr >= x0) & (fpr <= x1))
-            filtered_fpr = fpr[indices]
-            filtered_tpr = tpr[indices]
-
-            partial_auc = np.trapz(filtered_tpr, filtered_fpr)
-            info_text = f"Partial AUC between FPR {x0:.2f} and {x1:.2f} is {partial_auc:.4f}"
-        else:
-            info_text = "Draw two lines to calculate partial AUC."
-
-        return create_roc_plot(fpr, tpr, current_figure['layout']['shapes']), info_text
-
-    return dash.no_update
 
 
 
+# @app.callback(
+#     Output('roc-plot', 'figure'),
+#     Output('roc-plot-info', 'children'),
+#     Input('roc-plot', 'relayoutData'),  # Capture relayout events (e.g., drawing lines)
+#     State('roc-store', 'data'),  # Access stored fpr and tpr data
+#     State('roc-plot', 'figure'),
+#     State('drawing-mode', 'data'),  # Check if drawing mode is active
+#     prevent_initial_call=True
+# )
+# def update_roc_on_relayout(relayoutData, roc_data, current_figure, drawing_mode):
+#     if not roc_data:
+#         return dash.no_update
+
+#     fpr = np.array(roc_data['fpr'])
+#     tpr = np.array(roc_data['tpr'])
+
+#     if 'shapes' in relayoutData:
+#         current_figure['layout']['shapes'] = relayoutData['shapes']
+
+#         if len(current_figure['layout']['shapes']) == 2:
+#             x0 = current_figure['layout']['shapes'][0]['x0']
+#             x1 = current_figure['layout']['shapes'][1]['x0']
+
+#             if x0 > x1:
+#                 x0, x1 = x1, x0
+
+#             # Find the indices of the region bounded by the lower TPR and upper FPR
+#             indices = np.where((fpr >= x0) & (fpr <= x1))[0]
+
+#             # Filter the TPRs within this FPR range
+#             filtered_fpr = fpr[indices]
+#             filtered_tpr = tpr[indices]
+
+#             # Calculate the minimum TPR within this region
+#             min_tpr = min(filtered_tpr)
+#             max_tpr = max(filtered_tpr)
+
+#             # Further filter to only include points where TPR >= min_tpr
+#             region_indices = np.where(filtered_tpr >= min_tpr)[0]
+#             region_fpr = filtered_fpr[region_indices]
+#             region_tpr = filtered_tpr[region_indices]
+
+
+#             # Define the bounds for the rectangle
+#             rect_area = (max(filtered_fpr)) * (1 - min_tpr)
+
+#             # Calculate the partial AUC using the trapezoidal rule
+#             partial_auc = (np.trapz(region_tpr, region_fpr) - min_tpr * (max(filtered_fpr) - min(filtered_fpr))) / rect_area
+
+            
+
+#             # Normalize the partial AUC by the rectangle area
+#             normalized_partial_auc = partial_auc / rect_area if rect_area > 0 else 0
+
+#             info_text = (
+#                 f"Partial AUC in region bounded by FPR {x0:.2f} to {x1:.2f} and TPR {min_tpr:.2f} to {max_tpr:.2f} "
+#                 f"is {partial_auc:.4f}"
+#             )
+#         else:
+#             info_text = "Draw two lines to calculate partial AUC."
+
+#         return create_roc_plot(fpr, tpr, current_figure['layout']['shapes'], drawing_mode), info_text
+
+#     # If no relayoutData, just return the plot with the current drawing mode
+#     return create_roc_plot(fpr, tpr, current_figure['layout'].get('shapes', []), drawing_mode), dash.no_update
+
+# @app.callback(
+#     Output('roc-plot', 'figure'),
+#     Output('roc-plot-info', 'children'),
+#     Input('roc-plot', 'clickData'),  # Capture click events
+#     State('roc-store', 'data'),  # Access stored fpr and tpr data
+#     State('roc-plot', 'figure'),
+#     prevent_initial_call=True
+# )
+# def update_roc_on_click(click_data, roc_data, current_figure):
+#     if not roc_data:
+#         return dash.no_update
+
+#     fpr = np.array(roc_data['fpr'])
+#     tpr = np.array(roc_data['tpr'])
+
+#     # Initialize shapes if not already present
+#     shapes = current_figure.get('layout', {}).get('shapes', [])
+
+#     if click_data:
+#         x_clicked = click_data['points'][0]['x']
+
+#         # Check if a line at the x-coordinate already exists
+#         line_exists = any(
+#             shape['type'] == 'line' and shape['x0'] == x_clicked and shape['x1'] == x_clicked
+#             for shape in shapes
+#         )
+
+#         if line_exists:
+#             # If line exists, remove it
+#             shapes = [shape for shape in shapes if shape['x0'] != x_clicked]
+#         else:
+#             # Otherwise, add a new line
+#             shapes.append({
+#                 'type': 'line',
+#                 'x0': x_clicked,
+#                 'y0': 0,
+#                 'x1': x_clicked,
+#                 'y1': 1,
+#                 'line': {
+#                     'color': 'red',
+#                     'width': 2,
+#                     'dash': 'dash',
+#                 }
+#             })
+
+#     if len(shapes) == 2:
+#         # Calculate partial AUC if two lines are present
+#         x0 = shapes[0]['x0']
+#         x1 = shapes[1]['x0']
+
+#         if x0 > x1:
+#             x0, x1 = x1, x0
+
+#         # Find the indices of the region bounded by the lower TPR and upper FPR
+#         indices = np.where((fpr >= x0) & (fpr <= x1))[0]
+
+#         # Filter the TPRs within this FPR range
+#         filtered_fpr = fpr[indices]
+#         filtered_tpr = tpr[indices]
+
+#         # Calculate the minimum TPR within this region
+#         min_tpr = min(filtered_tpr)
+#         max_tpr = max(filtered_tpr)
+
+#         # Further filter to only include points where TPR >= min_tpr
+#         region_indices = np.where(filtered_tpr >= min_tpr)[0]
+#         region_fpr = filtered_fpr[region_indices]
+#         region_tpr = filtered_tpr[region_indices]
+
+#         # Define the bounds for the rectangle
+#         rect_area = (max(filtered_fpr)) * (1 - min_tpr)
+
+#         # Calculate the partial AUC using the trapezoidal rule
+#         partial_auc = (np.trapz(region_tpr, region_fpr) - min_tpr * (max(filtered_fpr) - min(filtered_fpr))) / rect_area
+
+#         # Normalize the partial AUC by the rectangle area
+#         normalized_partial_auc = partial_auc / rect_area if rect_area > 0 else 0
+
+#         info_text = (
+#             f"Partial AUC in region bounded by FPR {x0:.2f} to {x1:.2f} and TPR {min_tpr:.2f} to {max_tpr:.2f} "
+#             f"is {partial_auc:.4f}"
+#         )
+#     else:
+#         info_text = "Click to add lines and calculate partial AUC."
+
+#     return create_roc_plot(fpr, tpr, shapes), info_text
+
+
+mode_status = 'simulated'
 previous_values = {
     'predictions': [0, 0, 0],
     'true_labels': [0, 1, 0],
@@ -447,60 +572,68 @@ previous_values = {
     'curve_tpr': [0, 0, 0]
 }
 
+roc_plot_group = go.Figure()
+
 imported = False
 
 @app.callback(
-    [Output('roc-plot', 'figure', allow_duplicate=True), 
-     Output('cutoff-value', 'children'), 
-     Output('cutoff-slider', 'value'), 
-     Output('optimalcutoff-value', 'children'), 
-     Output('utility-plot', 'figure'),
-     Output('distribution-plot', 'figure'),
-     Output('initial-interval', 'disabled', allow_duplicate=True),
-     Output('dm-value', 'children'), 
-     Output('dsd-value', 'children'), 
-     Output('hm-value', 'children'), 
-     Output('hsd-value', 'children'), 
-     Output('utp-value', 'children'), 
-     Output('ufp-value', 'children'), 
-     Output('utn-value', 'children'), 
-     Output('ufn-value', 'children'), 
-     Output('pd-value', 'children'), 
-     Output('roc-store', 'data')],
-    [Input('cutoff-slider', 'value'), 
-     Input('roc-plot', 'clickData'), 
-     Input('uTP-slider', 'value'), 
-     Input('uFP-slider', 'value'), 
-     Input('uTN-slider', 'value'), 
-     Input('uFN-slider', 'value'), 
-     Input('pD-slider', 'value'), 
-     Input('data-type-dropdown', 'value'), 
-     Input({'type': 'upload-data', 'index': ALL}, 'contents'), 
-     Input('disease-mean-slider', 'value'), 
-     Input('disease-std-slider', 'value'), 
-     Input('healthy-mean-slider', 'value'), 
-     Input('healthy-std-slider', 'value'),
-     Input('initial-interval', 'n_intervals')],
+    Output('roc-plot', 'figure', allow_duplicate=True), 
+    Output('cutoff-value', 'children'), 
+    Output('cutoff-slider', 'value'), 
+    Output('optimalcutoff-value', 'children'), 
+    Output('utility-plot', 'figure'),
+    Output('distribution-plot', 'figure'),
+    Output('initial-interval', 'disabled', allow_duplicate=True),
+    Output('dm-value', 'children'), 
+    Output('dsd-value', 'children'), 
+    Output('hm-value', 'children'), 
+    Output('hsd-value', 'children'), 
+    Output('utp-value', 'children'), 
+    Output('ufp-value', 'children'), 
+    Output('utn-value', 'children'), 
+    Output('ufn-value', 'children'), 
+    Output('pd-value', 'children'), 
+    Output('roc-store', 'data'),
+    Output('roc-plot-info', 'children'),
+    Output('toggle-draw-mode', 'children'),  # New output to update button text
+    Input('cutoff-slider', 'value'), 
+    Input('roc-plot', 'clickData'), 
+    Input('uTP-slider', 'value'), 
+    Input('uFP-slider', 'value'), 
+    Input('uTN-slider', 'value'), 
+    Input('uFN-slider', 'value'), 
+    Input('pD-slider', 'value'), 
+    Input('data-type-dropdown', 'value'), 
+    Input({'type': 'upload-data', 'index': ALL}, 'contents'), 
+    Input('disease-mean-slider', 'value'), 
+    Input('disease-std-slider', 'value'), 
+    Input('healthy-mean-slider', 'value'), 
+    Input('healthy-std-slider', 'value'),
+    Input('initial-interval', 'n_intervals'),
+    Input('toggle-draw-mode', 'n_clicks'),  # New input for button clicks
     [State('roc-plot', 'figure'),
-     State('drawing-mode', 'data')],  # Adding the drawing mode state
+     State('roc-store', 'data'),
+     State('toggle-draw-mode', 'children'),
+     State('data-type-dropdown', 'value')],
     prevent_initial_call='initial_duplicate'
 )
-def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, initial_intervals, figure, drawing_mode):
+def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, initial_intervals, n_clicks, figure, roc_store, button_text, current_mode):
+    global previous_values
+    global imported
+    global roc_plot_group
+    global mode_status
+
+    changed = False
     ctx = dash.callback_context
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    # print(drawing_mode)
-    # Check if drawing mode is active
-    if drawing_mode and trigger_id != 'initial-interval':
-        # drawing_mode = False
-        return dash.no_update  # Prevent drawing a point if in drawing mode
-    # drawing_mode = False
 
-    if trigger_id == 'initial-interval':
-        if initial_intervals == 0:
-            slider_cutoff = 0.51
-        elif initial_intervals == 1:
-            slider_cutoff = 0.5
 
+    if mode_status != current_mode:
+        roc_plot_group = go.Figure()  # Clear the saved figure when switching modes
+        mode_status = current_mode
+        changed = True
+
+    info_text = ''
     if not ctx.triggered:
         slider_cutoff = 0.5
         click_data = None
@@ -515,12 +648,36 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         healthy_mean = 0
         healthy_std = 1
         figure = None
+        draw_mode = 'point'
+        button_text = 'Switch to Line Mode'
 
-    global previous_values
-    global imported
-    ctx = dash.callback_context
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
 
+    # Determine mode based on button text
+
+
+    # print(trigger_id)
+    # draw_mode = 'line' if 'Line' in button_text else 'point'
+    # button_text = 'Switch to Point Mode' if draw_mode == 'point' else 'Switch to Line Mode'
+    
+    # Handle ROC plot click
+    
+    # print(drawing_mode)
+    # Check if drawing mode is active
+    # if drawing_mode and trigger_id != 'initial-interval':
+    #     # drawing_mode = False
+    #     return dash.no_update  # Prevent drawing a point if in drawing mode
+    # # drawing_mode = False
+
+    if trigger_id == 'initial-interval':
+        if initial_intervals == 0:
+            slider_cutoff = 0.51
+        elif initial_intervals == 1:
+            slider_cutoff = 0.5
+        draw_mode = 'point'
+        button_text = 'Switch to Line Mode'
+        
+    # print(f'data type is {data_type}')
     if (data_type == 'imported' and upload_contents): 
         if upload_contents[0] is None:
             contents = 'data:text/csv;base64,None'
@@ -537,23 +694,78 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
         thresholds = cleanThresholds(thresholds)
-    elif data_type == 'simulated' or trigger_id == 'initial-interval':
+        previous_values['predictions'] = predictions
+        previous_values['true_labels'] = true_labels
+        previous_values['fpr'] = fpr
+        previous_values['tpr'] = tpr
+        previous_values['thresholds'] = thresholds
+    elif np.array_equal([0,0,0], previous_values['predictions']):
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
         predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
+        previous_values['predictions'] = predictions
+        previous_values['true_labels'] = true_labels
+        previous_values['fpr'] = fpr
+        previous_values['tpr'] = tpr
+        previous_values['thresholds'] = thresholds
+        draw_mode = 'point'
+        button_text = 'Switch to Line Mode'
+    elif data_type == 'simulated' and not np.array_equal([0,0,0], previous_values['predictions']):
+        np.random.seed(123)
+        true_labels = np.random.choice([0, 1], 1000)
+        predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
+        fpr, tpr, thresholds = roc_curve(true_labels, predictions)
+        auc = roc_auc_score(true_labels, predictions)
+        previous_values['predictions'] = predictions
+        previous_values['true_labels'] = true_labels
+        previous_values['fpr'] = fpr
+        previous_values['tpr'] = tpr
+        previous_values['thresholds'] = thresholds
+        # draw_mode = 'point'
+        # button_text = 'Switch to Line Mode'
+    elif data_type not in ['imported', 'simulated']:
+        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None, '', ''
+    # print(predictions)
+    
+    
+        # print('new suspicion')
+        # fpr = np.array(previous_values['fpr'])
+        # tpr = np.array(previous_values['tpr'])
+        # thresholds = np.array(previous_values['thresholds'])
+        # curve_fpr = previous_values['curve_fpr']
+        # curve_tpr = previous_values['curve_tpr']
+        # curve_points = list(zip(curve_fpr, curve_tpr))
+    predictions = previous_values['predictions']
+    true_labels = previous_values['true_labels']
+    fpr = np.array(previous_values['fpr'])
+    tpr = np.array(previous_values['tpr'])
+    thresholds = np.array(previous_values['thresholds'])
+    # print(np.array(previous_values['curve_fpr']))
+    curve_fpr = np.array(previous_values['curve_fpr'])
+    curve_tpr = np.array(previous_values['curve_tpr'])
+    curve_points = list(zip(curve_fpr, curve_tpr))
+    auc = roc_auc_score(true_labels, predictions)
+    if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
+        np.random.seed(123)
+        true_labels = np.random.choice([0, 1], 1000)
+        predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
+        fpr, tpr, thresholds = roc_curve(true_labels, predictions)
+        auc = roc_auc_score(true_labels, predictions)
+    # print(np.array_equal([0,0,0], previous_values['curve_fpr']))
+    if (np.array_equal(predictions, previous_values['predictions']) and np.array_equal(true_labels, previous_values['true_labels']) and not np.array_equal([0,0,0], previous_values['curve_fpr'])):
+        predictions = previous_values['predictions']
+        true_labels = previous_values['true_labels']
+        auc = roc_auc_score(true_labels, predictions)
+        fpr = np.array(previous_values['fpr'])
+        tpr = np.array(previous_values['tpr'])
+        thresholds = np.array(previous_values['thresholds'])
+        # print(np.array(previous_values['curve_fpr']))
+        curve_fpr = np.array(previous_values['curve_fpr'])
+        curve_tpr = np.array(previous_values['curve_tpr'])
+        curve_points = list(zip(curve_fpr, curve_tpr))
     else:
-        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', ''#, None
-
-    if (not np.array_equal(predictions, previous_values['predictions']) or not np.array_equal(true_labels, previous_values['true_labels'])) or (trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']):
-        if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
-            np.random.seed(123)
-            true_labels = np.random.choice([0, 1], 1000)
-            predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
-            fpr, tpr, thresholds = roc_curve(true_labels, predictions)
-            auc = roc_auc_score(true_labels, predictions)
-
         outer_idx = max_relative_slopes(fpr, tpr)[1]
         outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
         u_roc_fpr_fitted, u_roc_tpr_fitted = fpr[outer_idx], tpr[outer_idx]
@@ -577,15 +789,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         previous_values['thresholds'] = thresholds
         previous_values['curve_fpr'] = curve_points[:,0]
         previous_values['curve_tpr'] = curve_points[:,1]
-    else:
-        fpr = previous_values['fpr']
-        tpr = previous_values['tpr']
-        thresholds = previous_values['thresholds']
-        curve_fpr = previous_values['curve_fpr']
-        curve_tpr = previous_values['curve_tpr']
-        curve_points = list(zip(curve_fpr, curve_tpr))
+
 
     if not ctx.triggered or trigger_id == 'initial-interval':
+        # print('suspicion true')
         slider_cutoff = 0.5
         tpr_value = np.sum((np.array(true_labels) == 1) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 1)
         fpr_value = np.sum((np.array(true_labels) == 0) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 0)
@@ -608,9 +815,19 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         tpr_value_optimal_pt = original_tpr
         fpr_value_optimal_pt = original_fpr
         cutoff_optimal_pt = closest_prob_cutoff
+
+        # print(trigger_id)
+        if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
+            draw_mode = 'point'
+            button_text = 'Switch to Line Mode'
+        elif trigger_id in ['toggle-draw-mode'] and 'Point' in button_text:
+            draw_mode = 'line'
+            button_text = 'Switch to Point Mode'
+
+        # print(f'draw mode is {draw_mode}')
     else:
         # print(trigger_id)
-        if trigger_id in ['{"index":0,"type":"upload-data"}', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
+        if trigger_id in ['toggle-draw-mode', '{"index":0,"type":"upload-data"}', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
             H = uTN - uFP
             B = uTP - uFN + 0.000000001
             HoverB = H/B
@@ -629,36 +846,179 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
             fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
             cutoff = slider_cutoff
+            # print(draw_mode)
+            # print(button_text)
+            if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
+                draw_mode = 'point'
+                button_text = 'Switch to Point Mode'
+            elif trigger_id in ['toggle-draw-mode'] and 'Point' in button_text:
+                draw_mode = 'line'
+                button_text = 'Switch to Line Mode'
+            # print(f'changed to {draw_mode}')
+            # print(f'draw mode is {button_text}')
         elif trigger_id == 'roc-plot' and click_data:
-            x = click_data['points'][0]['x']
-            y = click_data['points'][0]['y']
-            distances = np.sqrt((fpr - x) ** 2 + (tpr - y) ** 2)
-            closest_idx = np.argmin(distances)
-            fpr_value = fpr[closest_idx]
-            tpr_value = tpr[closest_idx]
-            cutoff = thresholds[closest_idx]
-            slider_cutoff = cutoff
+
             
-            H = uTN - uFP
-            B = uTP - uFN + 0.000000001
-            HoverB = H/B
-            slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
-            cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
+            # print(f'button text is {button_text}')
+            # print(trigger_id)
+            # print(button_text)
 
-            closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
-            original_tpr, original_fpr, index = find_closest_pair_separate(tpr, fpr, closest_tpr, closest_fpr)
-            closest_prob_cutoff = thresholds[index]
+            #if we are in line mode
+            if 'Point' in button_text:
+                if not roc_store:
+                    return dash.no_update
+                
+                fpr = np.array(roc_store['fpr'])
+                tpr = np.array(roc_store['tpr'])
 
-            tpr_value_optimal_pt = original_tpr
-            fpr_value_optimal_pt = original_fpr
-            cutoff_optimal_pt = closest_prob_cutoff
+                # Initialize shapes if not already present
+                shapes = figure.get('layout', {}).get('shapes', [])
+
+                x_clicked = click_data['points'][0]['x']
+                y_clicked = click_data['points'][0]['y']
+
+                # print(x_clicked)
+                # Check if a line at the x-coordinate already exists
+                # line_exists = any(
+                #     shape['type'] == 'line' and shape['x0'] == x_clicked and shape['x1'] == x_clicked
+                #     for shape in shapes
+                # )
+
+                tolerance = 0.02
+                line_exists = any(
+                    shape['type'] == 'line' and (abs(shape['x0'] - x_clicked) < tolerance)
+                    for shape in shapes
+                )
+                        # shapes = [shape for shape in shapes if abs(shape['x0'] - x_clicked) > tolerance]
+
+
+                # print(f'line_exists is {line_exists}')
+                if line_exists:
+                    # If line exists, remove it
+                    shapes = [shape for shape in shapes if (abs(shape['x0'] - x_clicked) > tolerance)]
+                elif len(shapes) < 2:
+                    # Otherwise, add a new line (only if there are less than 2 lines)
+                    shapes.append({
+                        'type': 'line',
+                        'x0': x_clicked,
+                        'y0': 0,
+                        'x1': x_clicked,
+                        'y1': 1,
+                        'line': {
+                            'color': 'red',
+                            'width': 2,
+                            'dash': 'dash',
+                        }
+                    })
+
+                if len(shapes) == 2:
+                    # Calculate partial AUC if two lines are present
+                    x0 = shapes[0]['x0']
+                    x1 = shapes[1]['x0']
+
+                    if x0 > x1:
+                        x0, x1 = x1, x0
+
+                    # Find the indices of the region bounded by the lower TPR and upper FPR
+                    indices = np.where((fpr >= x0) & (fpr <= x1))[0]
+
+                    # Filter the TPRs within this FPR range
+                    filtered_fpr = fpr[indices]
+                    filtered_tpr = tpr[indices]
+
+                    # Calculate the minimum TPR within this region
+                    min_tpr = min(filtered_tpr)
+                    max_tpr = max(filtered_tpr)
+
+                    # Further filter to only include points where TPR >= min_tpr
+                    region_indices = np.where(filtered_tpr >= min_tpr)[0]
+                    region_fpr = filtered_fpr[region_indices]
+                    region_tpr = filtered_tpr[region_indices]
+
+                    # Define the bounds for the rectangle
+                    rect_area = (max(filtered_fpr)) * (1 - min_tpr)
+
+                    # Calculate the partial AUC using the trapezoidal rule
+                    partial_auc = (np.trapz(region_tpr, region_fpr) - min_tpr * (max(filtered_fpr) - min(filtered_fpr))) / rect_area
+
+                    # # Normalize the partial AUC by the rectangle area
+                    # normalized_partial_auc = partial_auc / rect_area if rect_area > 0 else 0
+
+                    info_text = (
+                        f"Partial AUC in region bounded by FPR {x0:.2f} to {x1:.2f} and TPR {min_tpr:.2f} to {max_tpr:.2f} "
+                        f"is {partial_auc:.4f}"
+                    )
+                else:
+                    info_text = "Click to add lines and calculate partial AUC."
+
+                # Update the ROC plot with new shapes
+                figure['layout']['shapes'] = shapes
+
+                roc_plot_group = go.Figure(figure)
+
+                H = uTN - uFP
+                B = uTP - uFN + 0.000000001
+                HoverB = H/B
+                slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+                cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
+
+                closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
+                original_tpr, original_fpr, index = find_closest_pair_separate(tpr, fpr, closest_tpr, closest_fpr)
+                closest_prob_cutoff = thresholds[index]
+
+                tpr_value_optimal_pt = original_tpr
+                fpr_value_optimal_pt = original_fpr
+                cutoff_optimal_pt = closest_prob_cutoff
+
+                fpr_value = fpr_value_optimal_pt
+                tpr_value = tpr_value_optimal_pt
+                cutoff = closest_prob_cutoff
+
+            else:
+                x = click_data['points'][0]['x']
+                y = click_data['points'][0]['y']
+                distances = np.sqrt((fpr - x) ** 2 + (tpr - y) ** 2)
+                closest_idx = np.argmin(distances)
+                fpr_value = fpr[closest_idx]
+                tpr_value = tpr[closest_idx]
+                cutoff = thresholds[closest_idx]
+                slider_cutoff = cutoff
+                
+                H = uTN - uFP
+                B = uTP - uFN + 0.000000001
+                HoverB = H/B
+                slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+                cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
+
+                closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
+                original_tpr, original_fpr, index = find_closest_pair_separate(tpr, fpr, closest_tpr, closest_fpr)
+                closest_prob_cutoff = thresholds[index]
+
+                tpr_value_optimal_pt = original_tpr
+                fpr_value_optimal_pt = original_fpr
+                cutoff_optimal_pt = closest_prob_cutoff
         else:
             return dash.no_update
 
+
+    # if 'Line' in button_text:
     roc_fig = go.Figure()
+    # else:
+    #     roc_fig = roc_plot_group
+    # Extract the lines from the saved figure
+    if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
+        lines = [shape for shape in roc_plot_group.layout.shapes if shape.type == 'line']
+
     roc_fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC Curve', line=dict(color='blue')))
-    roc_fig.add_trace(go.Scatter(x=[fpr_value], y=[tpr_value], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
+    if 'Line' in button_text:
+        roc_fig.add_trace(go.Scatter(x=[fpr_value], y=[tpr_value], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
     roc_fig.add_trace(go.Scatter(x=[fpr_value_optimal_pt], y=[tpr_value_optimal_pt], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
+
+    if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
+        # Add the extracted lines to the new figure
+        roc_fig.update_layout(
+            shapes=lines  # Add the extracted lines
+        )
 
     roc_fig.update_layout(
         title={
@@ -893,10 +1253,13 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     # print(modelTest_json)
     initial_interval_disabled = initial_intervals >= 1
 
+    if current_mode == 'imported' and slider_cutoff >= 1:
+        slider_cutoff = 0.5
+
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
              utility_fig, distribution_fig, initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
-                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data)#, modelTest_json)
+                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, info_text, button_text)#, modelTest_json)
 
 
 @app.callback(
