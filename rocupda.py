@@ -995,7 +995,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 'xanchor': 'center'
             },
             xaxis_title='Value',
-            yaxis_title='Count',
+            yaxis_title='Probability Density or Likelihood',
             barmode='overlay',
             template='plotly_white',
         )
@@ -1005,8 +1005,8 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         healthy_pdf = norm.pdf(x_values, healthy_mean, healthy_std)
 
         distribution_fig = go.Figure()
-        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(diseased_pdf, 3), mode='lines', name='Diseased', line=dict(color='red')))
-        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(healthy_pdf, 3), mode='lines', name='Healthy', line=dict(color='green')))
+        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(diseased_pdf, 3), mode='lines', name='Diseased', line=dict(color='red'), fill='tozeroy'))
+        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(healthy_pdf, 3), mode='lines', name='Healthy', line=dict(color='blue'), fill='tozeroy'))
         distribution_fig.add_shape(
             type="line",
             x0=slider_cutoff,
