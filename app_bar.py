@@ -20,7 +20,7 @@ def create_app_bar():
         children=[
             html.Div("Clinical Utility Profiling - Decision Analytic Dashboard ", style={"fontSize": "24px", "fontWeight": "bold", "flex": "1"}),
             html.A("Home", href="/", style={"color": "white", "marginRight": "20px", "textDecoration": "none"}),
-            html.A("Applicability Area (ApAr)", href="/page-2", style={"color": "white", "marginRight": "20px", "textDecoration": "none"}),
+            html.A("Applicability Area (ApAr)", href="/apar", style={"color": "white", "marginRight": "20px", "textDecoration": "none"}),
             html.A("About", href="https://github.com/StarLiu1/da-dashapp", target="_blank", style={"color": "white", "marginRight": "20px", "textDecoration": "none"})
         ]
     )

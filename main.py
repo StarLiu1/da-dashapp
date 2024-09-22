@@ -2,7 +2,7 @@ from dash import dcc, html
 from dash.dependencies import Input, Output
 from app import app, server
 import rocupda
-import page2
+import apar
 from app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
 
 app.layout = html.Div([
@@ -17,7 +17,7 @@ def display_page(pathname):
     if pathname == '/':
         return rocupda.layout
     elif pathname == '/apar':
-        return page2.layout
+        return apar.layout
 
     else:
         return rocupda.layout  # default to Home page

@@ -30,7 +30,7 @@ layout = html.Div([
             ),
             html.Div(id='input-fields', style={'width': '95%'}),
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '45px'}),
-        html.Div(dcc.Graph(id='distribution-plot', config={'displayModeBar': True}), style={'width': '70%', 'paddingTop': '10px'})
+        html.Div(dcc.Graph(id='distribution-plot'), style={'width': '70%', 'paddingTop': '50px'})
     ], style={'display': 'flex', 'width': '100%'}),
     html.Div([
         
@@ -112,12 +112,16 @@ layout = html.Div([
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
-        html.Button('Switch to Line Mode', id='toggle-draw-mode', n_clicks=0),
-        dcc.Graph(id='roc-plot', config={'displayModeBar': True}, style={'width': '33%'}),
+        html.Div([
+            dcc.Graph(id='roc-plot', style={'height': '92%'}),
+            html.Button('Switch to Line Mode', id='toggle-draw-mode', n_clicks=0, style={'paddingBottom': '0'}),
+        ], style={'width': '33%', 'display': 'flex', 'flexDirection': 'column'}),
         html.Div(id='roc-plot-info'),
 
-        dcc.Graph(id='utility-plot', config={'displayModeBar': True}, style={'width': '37%'}),
+        dcc.Graph(id='utility-plot', style={'width': '37%'}),
+        
     ], style={'display': 'flex', 'width': '100%'}),
+    
     html.Div([
         dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1)
     ]),
@@ -789,10 +793,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
         lines = [shape for shape in roc_plot_group.layout.shapes if shape.type == 'line']
 
-    roc_fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC Curve', line=dict(color='blue')))
+    roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
     if 'Line' in button_text:
-        roc_fig.add_trace(go.Scatter(x=[fpr_value], y=[tpr_value], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
-    roc_fig.add_trace(go.Scatter(x=[fpr_value_optimal_pt], y=[tpr_value_optimal_pt], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
+        roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value, 3)], y=[np.round(tpr_value, 3)], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
+    roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
 
     if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
         # Add the extracted lines to the new figure
@@ -828,6 +832,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         )
     ]
     )
+    roc_fig.update_layout(
+        margin=dict(l=30, r=20, t=30, b=10),
+    )
 
     disease_m_text = f"Disease Mean: {disease_mean:.2f}"
     disease_sd_text = f"Disease Standard Deviation: {disease_std:.2f}"
@@ -859,10 +866,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     pL = sy.solve(treatNone(xVar, uFN, uTN) - test(xVar, tpr_value, 1-fpr_value, uTN, uTP, uFN, uFP, 0), xVar)
 
     utility_fig = go.Figure()
-    utility_fig.add_trace(go.Scatter(x=p_values, y=line1, mode='lines', name='Treat All', line=dict(color='green')))
-    utility_fig.add_trace(go.Scatter(x=p_values, y=line2, mode='lines', name='Treat None', line=dict(color='orange')))
-    utility_fig.add_trace(go.Scatter(x=p_values, y=line3, mode='lines', name='Test', line=dict(color='blue')))
-    utility_fig.add_trace(go.Scatter(x=p_values, y=line4, mode='lines', name='Optimal Cutoff', line=dict(color='red')))
+    utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line1, 3), mode='lines', name='Treat All', line=dict(color='green')))
+    utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line2, 3), mode='lines', name='Treat None', line=dict(color='orange')))
+    utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line3, 3), mode='lines', name='Test', line=dict(color='blue')))
+    utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line4, 3), mode='lines', name='Optimal Cutoff', line=dict(color='red')))
 
     # Add a vertical line at x = pL
     utility_fig.add_trace(go.Scatter(
@@ -935,12 +942,15 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         yaxis_title='Expected Utility',
         template='plotly_white',
     )
+    utility_fig.update_layout(
+        margin=dict(l=30, r=20, t=30, b=70),
+    )
 
     if data_type == 'imported' and upload_contents or (upload_contents and trigger_id == 'imported-interval'):
         distribution_fig = go.Figure()
         # distribution_fig.add_trace(go.Histogram(x=predictions, name='Diseased', opacity=0.75, marker=dict(color='grey')))
         distribution_fig.add_trace(go.Histogram(
-            x=[pred for pred, label in zip(predictions, true_labels) if label == 1],
+            x=[np.round(pred, 3) for pred, label in zip(predictions, true_labels) if label == 1],
             name='Diseased',
             opacity=0.5,
             marker=dict(color='blue')
@@ -948,7 +958,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
         # Add histogram for the non-diseased group (true_label == 0)
         distribution_fig.add_trace(go.Histogram(
-            x=[pred for pred, label in zip(predictions, true_labels) if label == 0],
+            x=[np.round(pred, 3) for pred, label in zip(predictions, true_labels) if label == 0],
             name='Non-Diseased',
             opacity=0.5,
             marker=dict(color='red')
@@ -995,8 +1005,8 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         healthy_pdf = norm.pdf(x_values, healthy_mean, healthy_std)
 
         distribution_fig = go.Figure()
-        distribution_fig.add_trace(go.Scatter(x=x_values, y=diseased_pdf, mode='lines', name='Diseased', line=dict(color='red')))
-        distribution_fig.add_trace(go.Scatter(x=x_values, y=healthy_pdf, mode='lines', name='Healthy', line=dict(color='green')))
+        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(diseased_pdf, 3), mode='lines', name='Diseased', line=dict(color='red')))
+        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(healthy_pdf, 3), mode='lines', name='Healthy', line=dict(color='green')))
         distribution_fig.add_shape(
             type="line",
             x0=slider_cutoff,
@@ -1015,6 +1025,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             xaxis_title='Value',
             yaxis_title='Count',
             template='plotly_white',
+        )
+        distribution_fig.update_layout(
+            margin=dict(l=30, r=20, t=50, b=0),
         )
 
 
