@@ -116,7 +116,7 @@ layout = html.Div([
             dcc.Graph(id='roc-plot', style={'height': '92%'}),
             html.Button('Switch to Line Mode', id='toggle-draw-mode', n_clicks=0, style={'paddingBottom': '0'}),
         ], style={'width': '33%', 'display': 'flex', 'flexDirection': 'column'}),
-        html.Div(id='roc-plot-info'),
+        # html.Div(id='roc-plot-info'),
 
         dcc.Graph(id='utility-plot', style={'width': '37%'}),
         
@@ -418,7 +418,7 @@ imported = False
     Output('ufn-value', 'children'), 
     Output('pd-value', 'children'), 
     Output('roc-store', 'data'),
-    Output('roc-plot-info', 'children'),
+    # Output('roc-plot-info', 'children'),
     Output('toggle-draw-mode', 'children'),  # New output to update button text
     Input('cutoff-slider', 'value'), 
     Input('roc-plot', 'clickData'), 
@@ -544,6 +544,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     curve_tpr = np.array(previous_values['curve_tpr'])
     curve_points = list(zip(curve_fpr, curve_tpr))
     auc = roc_auc_score(true_labels, predictions)
+    partial_auc = 0
     if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
@@ -616,10 +617,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         # print(trigger_id)
         if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
             draw_mode = 'point'
-            button_text = 'Switch to Line Mode'
+            button_text = 'Switch to Line Mode (select region for partial AUC)'
         elif trigger_id in ['toggle-draw-mode'] and 'Point' in button_text:
             draw_mode = 'line'
-            button_text = 'Switch to Point Mode'
+            button_text = 'Switch to Point Mode (select operating point)'
 
         # print(f'draw mode is {draw_mode}')
     else:
@@ -676,38 +677,151 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
                 tolerance = 0.02
                 line_exists = any(
-                    shape['type'] == 'line' and (abs(shape['x0'] - x_clicked) < tolerance)
+                    shape['type'] == 'line' and (abs(shape['x0'] - x_clicked) < tolerance or abs(shape['y0'] - y_clicked) < tolerance)
                     for shape in shapes
                 )
-                # print(f'line_exists is {line_exists}')
+
                 if line_exists:
                     # If line exists, remove it
-                    shapes = [shape for shape in shapes if (abs(shape['x0'] - x_clicked) > tolerance)]
-                elif len(shapes) < 2:
-                    # Otherwise, add a new line (only if there are less than 2 lines)
+                    shapes = [
+                        shape for shape in shapes 
+                        if not (
+                            shape['type'] == 'line' and (
+                                (shape['x0'] == 0 and shape['x1'] == 1 and abs(shape['y0'] - y_clicked) < tolerance) or
+                                (shape['y0'] == 0 and shape['y1'] == 1 and abs(shape['x0'] - x_clicked) < tolerance)
+                            )
+                        )
+                    ]
+
+                elif len(shapes) == 0:
+                    # Add a new horizontal line if there are no lines
                     shapes.append({
                         'type': 'line',
-                        'x0': x_clicked,
-                        'y0': 0,
-                        'x1': x_clicked,
-                        'y1': 1,
+                        'x0': 0,
+                        'y0': y_clicked,
+                        'x1': 1,
+                        'y1': y_clicked,
                         'line': {
                             'color': 'red',
                             'width': 2,
                             'dash': 'dash',
                         }
                     })
+                elif len(shapes) == 1:
+                    if (shapes[0]['y0'] == 0 and shapes[0]['y1'] == 1):
+                        shapes.append({
+                            'type': 'line',
+                            'x0': 0,
+                            'y0': y_clicked,
+                            'x1': 1,
+                            'y1': y_clicked,
+                            'line': {
+                                'color': 'red',
+                                'width': 2,
+                                'dash': 'dash',
+                            }
+                        })
+                    else:# Add a new line if there are no lines
+                        shapes.append({
+                            'type': 'line',
+                            'x0': x_clicked,
+                            'y0': 0,
+                            'x1': x_clicked,
+                            'y1': 1,
+                            'line': {
+                                'color': 'red',
+                                'width': 2,
+                                'dash': 'dash',
+                            }
+                        })
+                    # #add a new line, but reshape into a horizontal and a vertical
+                    # #coordinates of first line
+                    # x0 = shapes[0]['x0']
+                    # y0 = shapes[0]['y0']
+
+                    # x1 = x_clicked
+
+                    # if x0 > x1:
+                    #     x0, x1 = x1, x0
+
+                    # # Find the indices of the region bounded by the lower TPR and upper FPR
+                    # indices = np.where((fpr >= x0) & (fpr <= x1))[0]
+
+                    # # Filter the TPRs within this FPR range
+                    # filtered_fpr = fpr[indices]
+                    # filtered_tpr = tpr[indices]
+
+                    # # Calculate the minimum TPR within this region
+                    # min_tpr = min(filtered_tpr)
+                    # max_tpr = max(filtered_tpr)
+
+                    # #clear lines
+                    # shapes = []
+
+                    # #newly clicked line coordiantes x_clicked, y_clicked
+
+                    # #find the lower tpr of the two
+                    # # horizontal_tpr = y0 if y0 < y_clicked else y_clicked
+
+                    # #find the higher fpr of the two
+                    # vertical_fpr = x0 if x0 > x_clicked else x_clicked
+
+                    # # add a horizontal line
+                    # shapes.append({
+                    #     'type': 'line',
+                    #     'x0': 0,
+                    #     'y0': min_tpr,
+                    #     'x1': vertical_fpr,
+                    #     'y1': min_tpr,
+                    #     'line': {
+                    #         'color': 'red',
+                    #         'width': 2,
+                    #         'dash': 'dash',
+                    #     }
+                    # })
+
+                    # # add a vertical line
+                    # shapes.append({
+                    #     'type': 'line',
+                    #     'x0': vertical_fpr,
+                    #     'y0': min_tpr,
+                    #     'x1': vertical_fpr,
+                    #     'y1': 1,
+                    #     'line': {
+                    #         'color': 'red',
+                    #         'width': 2,
+                    #         'dash': 'dash',
+                    #     }
+                    # })
 
                 if len(shapes) == 2:
                     # Calculate partial AUC if two lines are present
-                    x0 = shapes[0]['x0']
-                    x1 = shapes[1]['x0']
+                    if shapes[0]['y1'] < shapes[1]['y1']:
+                        #horizontal shape
+                        x0 = shapes[0]['x0']
+                        y0 = shapes[0]['y0']
+                        #vertical shape
+                        x1 = shapes[1]['x0']
+                        y1 = shapes[1]['y0']
+                    else:
+                        #horizontal shape
+                        x1 = shapes[0]['x0']
+                        y1 = shapes[0]['y0']
+                        #vertical shape
+                        x0 = shapes[1]['x0']
+                        y0 = shapes[1]['y0']
 
-                    if x0 > x1:
-                        x0, x1 = x1, x0
+                    idx_lower = (np.abs(tpr - y0)).argmin()
+                    idx_upper = (np.abs(fpr - x1)).argmin()
+
+                    lowerX = fpr[idx_lower]
+                    upperX = fpr[idx_upper]
+
+                    # if x0 > x1:
+                    #     x0, x1 = x1, x0
 
                     # Find the indices of the region bounded by the lower TPR and upper FPR
-                    indices = np.where((fpr >= x0) & (fpr <= x1))[0]
+                    indices = np.where((fpr >= lowerX) & (fpr <= upperX))[0]
 
                     # Filter the TPRs within this FPR range
                     filtered_fpr = fpr[indices]
@@ -733,7 +847,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                         f"is {partial_auc:.4f}"
                     )
                 else:
-                    info_text = "Click to add lines and calculate partial AUC."
+                    partial_auc = "Click to add lines and calculate partial AUC."
 
                 # Update the ROC plot with new shapes
                 figure['layout']['shapes'] = shapes
@@ -817,6 +931,22 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         dict(
             x=0.95,
             y=0.05,
+            xref='paper',
+            yref='paper',
+            text = f'pAUC = {round(partial_auc, 3) if isinstance(partial_auc, (int, float)) else partial_auc}',
+            showarrow=False,
+            font=dict(
+                size=12,
+                color='black'
+            ),
+            align='right',
+            bgcolor='white',
+            bordercolor='black',
+            borderwidth=1
+        ),
+        dict(
+            x=0.95,
+            y=0.1,
             xref='paper',
             yref='paper',
             text=f'AUC = {auc:.3f}',
@@ -1052,7 +1182,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
              utility_fig, distribution_fig, initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
-                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, info_text, button_text)#, modelTest_json)
+                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, button_text)#, modelTest_json)
 
 
 @app.callback(
