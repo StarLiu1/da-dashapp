@@ -6,3 +6,19 @@
     padding: 5px 10px;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+
+h2 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+p {
+    margin-bottom: 15px;
+}
+
+ul {
+    margin-top: 10px;
+    text-align: left; /* Align the team list to the left */
+    display: inline-block; /* To ensure it's aligned in the center container */
+}
