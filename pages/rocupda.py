@@ -7,10 +7,10 @@ from sklearn.metrics import roc_curve, roc_auc_score
 import plotly.graph_objects as go
 import base64
 import io
-from ClinicalUtilityProfiling import *
+from components.ClinicalUtilityProfiling import *
 from scipy.stats import norm
 from app import app
-from app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
+from components.app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
 
 # Add CSS for the menu interaction
 
