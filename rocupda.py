@@ -734,66 +734,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                                 'dash': 'dash',
                             }
                         })
-                    # #add a new line, but reshape into a horizontal and a vertical
-                    # #coordinates of first line
-                    # x0 = shapes[0]['x0']
-                    # y0 = shapes[0]['y0']
-
-                    # x1 = x_clicked
-
-                    # if x0 > x1:
-                    #     x0, x1 = x1, x0
-
-                    # # Find the indices of the region bounded by the lower TPR and upper FPR
-                    # indices = np.where((fpr >= x0) & (fpr <= x1))[0]
-
-                    # # Filter the TPRs within this FPR range
-                    # filtered_fpr = fpr[indices]
-                    # filtered_tpr = tpr[indices]
-
-                    # # Calculate the minimum TPR within this region
-                    # min_tpr = min(filtered_tpr)
-                    # max_tpr = max(filtered_tpr)
-
-                    # #clear lines
-                    # shapes = []
-
-                    # #newly clicked line coordiantes x_clicked, y_clicked
-
-                    # #find the lower tpr of the two
-                    # # horizontal_tpr = y0 if y0 < y_clicked else y_clicked
-
-                    # #find the higher fpr of the two
-                    # vertical_fpr = x0 if x0 > x_clicked else x_clicked
-
-                    # # add a horizontal line
-                    # shapes.append({
-                    #     'type': 'line',
-                    #     'x0': 0,
-                    #     'y0': min_tpr,
-                    #     'x1': vertical_fpr,
-                    #     'y1': min_tpr,
-                    #     'line': {
-                    #         'color': 'red',
-                    #         'width': 2,
-                    #         'dash': 'dash',
-                    #     }
-                    # })
-
-                    # # add a vertical line
-                    # shapes.append({
-                    #     'type': 'line',
-                    #     'x0': vertical_fpr,
-                    #     'y0': min_tpr,
-                    #     'x1': vertical_fpr,
-                    #     'y1': 1,
-                    #     'line': {
-                    #         'color': 'red',
-                    #         'width': 2,
-                    #         'dash': 'dash',
-                    #     }
-                    # })
-
+                    
                 if len(shapes) == 2:
                     # Calculate partial AUC if two lines are present
                     if shapes[0]['y1'] < shapes[1]['y1']:
