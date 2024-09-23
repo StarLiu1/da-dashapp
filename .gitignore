@@ -11,3 +11,6 @@ node_modules/
 data.csv
 app2.py
 app_bar_bubble.py
+Dockerfile
+render-build.sh
+startup.txt

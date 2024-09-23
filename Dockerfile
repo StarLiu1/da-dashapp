@@ -18,4 +18,4 @@ CMD ["python", "app.py"]
 EXPOSE 8000
 
 # Command to run the application using Gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:80", "app:server"]
+CMD ["gunicorn", "-b", "0.0.0.0:80", "app:server"] 
