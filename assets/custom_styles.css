@@ -1,0 +1,8 @@
+/* Styles for the app bar tab links */
+.tab-link:hover {
+    background-color: #478ECC; /* Background color when hovered */
+    color: white;  /* Text color when hovered */
+    border-radius: 5px;
+    padding: 5px 10px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}

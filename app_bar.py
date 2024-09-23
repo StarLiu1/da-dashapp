@@ -1,4 +1,4 @@
-from dash import html
+from dash import dcc, html
 
 def create_app_bar():
     return html.Div(
@@ -18,9 +18,31 @@ def create_app_bar():
             "zIndex": "1000"
         },
         children=[
-            html.Div("Clinical Utility Profiling - Decision Analytic Dashboard ", style={"fontSize": "24px", "fontWeight": "bold", "flex": "1"}),
-            html.A("Home", href="/", style={"color": "white", "marginRight": "20px", "textDecoration": "none"}),
-            html.A("Applicability Area (ApAr)", href="/apar", style={"color": "white", "marginRight": "20px", "textDecoration": "none"}),
-            html.A("About", href="https://github.com/StarLiu1/da-dashapp", target="_blank", style={"color": "white", "marginRight": "20px", "textDecoration": "none"})
+            html.A("Clinical Utility Profiling - Decision Analytic Dashboard", href="/", 
+                   style={
+                       "fontSize": "24px", "fontWeight": "bold", "flex": "1", "color": "white", 
+                       "textDecoration": "none", "padding": "5px", "marginRight": "20px", 
+                    #    "transition": "color 0.3s ease, background-color 0.3s ease"
+                   }),
+            html.A("Read Me", href="/readme", 
+                   style={
+                       "fontSize": "24px", "fontWeight": "bold", "color": "white", "marginRight": "30px",
+                       "textDecoration": "none", "padding": "5px", "transition": "color 0.3s ease, background-color 0.3s ease"
+                   }, className="tab-link"),
+            html.A("Main Dashboard", href="/", 
+                   style={
+                       "fontSize": "24px", "fontWeight": "bold", "color": "white", "marginRight": "30px",
+                       "textDecoration": "none", "padding": "5px", "transition": "color 0.3s ease, background-color 0.3s ease"
+                   }, className="tab-link"),
+            html.A("Applicability Area (ApAr)", href="/apar", 
+                   style={
+                       "fontSize": "24px", "fontWeight": "bold", "color": "white", "marginRight": "30px",
+                       "textDecoration": "none", "padding": "5px", "transition": "color 0.3s ease, background-color 0.3s ease"
+                   }, className="tab-link"),
+            html.A("GitHub", href="https://github.com/StarLiu1/da-dashapp", target="_blank",
+                   style={
+                       "fontSize": "24px", "fontWeight": "bold", "color": "white", "marginRight": "20px",
+                       "textDecoration": "none", "padding": "5px", "transition": "color 0.3s ease, background-color 0.3s ease"
+                   }, className="tab-link")
         ]
     )
