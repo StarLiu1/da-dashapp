@@ -491,8 +491,8 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             contents = upload_contents[0]
         df = parse_contents(contents)
         if df is None:
-            true_labels = [0, 1, 0]
-            predictions = [0, 0, 0]
+            true_labels = [0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0]
+            predictions = [0.1, 0.5, 1.0, 0.1, 0.3, 0.8, 0.1, 0.9, 1.0, 1.0, 0.2, 0.5, 0.8, 0, 1, 0, 1, 0.3, 0.4, 0.2]
         else:
             true_labels = df['true_labels'].values
             predictions = df['predictions'].values
@@ -943,6 +943,12 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line4, 3), mode='lines', name='Optimal Cutoff', line=dict(color='red')))
 
     # Add a vertical line at x = pL
+    # print(len(pL))
+    if len(pL) == 0:
+        pL = [0]
+        pU = [0]
+        pStar = [0]
+
     utility_fig.add_trace(go.Scatter(
         x=[float(pL[0]), float(pL[0])],  # Same x value for both points to create a vertical line
         y=[0, 1],  # Full height of the y-axis

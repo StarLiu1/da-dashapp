@@ -344,7 +344,8 @@ previous_values_2 = {
     'pUs': [0, 0, 0],
     'curve_fpr': [0, 0, 0],
     'curve_tpr': [0, 0, 0],
-    'cutoff_optimal_pt': 0.5
+    'cutoff_optimal_pt': 0.5,
+    'area': 0
 }
 modelTest = {
     'tpr': [0,0,0],
@@ -423,6 +424,16 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
     B = uTP - uFN + 0.000000001
     HoverB = H/B
 
+    # area = 0
+    largestRangePrior = 0
+    largestRangePriorThresholdIndex = -999
+    withinRange = False
+    priorDistributionArray = []
+    leastViable = 1
+    minPrior = 0
+    maxPrior = 0
+    meanPrior = 0
+
     if (data_type == 'imported' and upload_contents): 
         if upload_contents[0] is None:
             contents = 'data:text/csv;base64,None'
@@ -430,8 +441,8 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             contents = upload_contents[0]
         df = parse_contents(contents)
         if df is None:
-            true_labels = [0, 1, 1, 0, 1, 0, 1, 0, 1, 1]
-            predictions = [0.1, 0.5, 1.0, 0.1, 0.3, 0.8, 0.1, 0.9, 1.0, 1.0]
+            true_labels = [0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0]
+            predictions = [0.1, 0.5, 1.0, 0.1, 0.3, 0.8, 0.1, 0.9, 1.0, 1.0, 0.2, 0.5, 0.8, 0, 1, 0, 1, 0.3, 0.4, 0.2]
             thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         else:
             true_labels = df['true_labels'].values
@@ -511,7 +522,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             previous_values_2['curve_fpr'] = curve_points[:,0]
             previous_values_2['curve_tpr'] = curve_points[:,1]
     else:
-        return go.Figure(), "", 0.5, True, '', '', '', '', '', '', '', '', ''
+        return go.Figure(), "", 0.5, True, '', '', '', '', '', '', '', '', '', ''
 
     if (not np.array_equal(predictions, previous_values_2['predictions']) or not np.array_equal(true_labels, previous_values_2['true_labels'])) or (trigger_id in ['disease-mean-slider-2', 'disease-std-slider-2', 'healthy-mean-slider-2', 'healthy-std-slider-2']):
         
@@ -642,9 +653,81 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
 
         # print(modelTest)
         # print(f'min pU is {min(pUs)}')
+        if trigger_id  == 'initial-interval-2':
+            #calculate applicability area
+            area = 0
+            for i, prior in enumerate(pLs):
+                if i < len(pLs) - 1:
+                    if pLs[i] < pUs[i] and pLs[i + 1] < pUs[i + 1]:
+                        
+                        #find the range of priors
+                        rangePrior = pUs[i] - pLs[i]
+                        
+                        #check if it is the largest range of priors
+                        if rangePrior > largestRangePrior:
+                            largestRangePrior = rangePrior
+                            largestRangePriorThresholdIndex = i
+                            
+                        # trapezoidal rule (upper + lower base)/2
+                        avgRangePrior = (rangePrior + (pUs[i + 1] - pLs[i + 1])) / 2 
+                        
+                        #accumulate areas
+                        area += abs(avgRangePrior) * abs(thresholds[i + 1] - thresholds[i])
+                        
+                    #where pL and pU cross into pU > pL
+                    elif pLs[i] > pUs[i] and pLs[i + 1] < pUs[i + 1]:                
+                        x0 = thresholds[i]
+                        x1 = thresholds[i+1]
+                        if x0 != x1:
+                            pL0 = pLs[i]
+                            pL1 = pLs[i+1]
+                            pU0 = pUs[i]
+                            pU1 = pUs[i+1]
+                            x = sy.symbols('x')
+                            
+                            #solve for x and y at the intersection
+                            xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                            yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                            
+                            # trapezoidal rule (upper + lower base)/2
+                            avgRangePrior = (0 + (pUs[i + 1] - pLs[i + 1])) / 2
+                            
+                            #accumulate areas
+                            area += abs(avgRangePrior) * abs(thresholds[i + 1] - xIntersect[0])
+                        
+                    elif (pLs[i] < pUs[i] and pLs[i + 1] > pUs[i + 1]):
+                        x0 = thresholds[i]
+                        x1 = thresholds[i+1]
+                        if x0 != x1:
+                            pL0 = pLs[i]
+                            pL1 = pLs[i+1]
+                            pU0 = pUs[i]
+                            pU1 = pUs[i+1]
+                            x = sy.symbols('x')
+                            
+                            #solve for x and y at the intersection
+                            xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                            
+                            if len(xIntersect) == 0:
+                                xIntersect = [0]
+                                
+                            yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                            
+                            #accumulate areas
+                            avgRangePrior = (0 + (pUs[i] - pLs[i])) / 2 # trapezoidal rule (upper + lower base)/2
+                            area += abs(avgRangePrior) * abs(xIntersect[0] - thresholds[i + 1])
+                        
+            #round the calculation
+            area = np.round(float(area), 3)
+            
+            #due to minor calculation inaccuracies in the previous iterations of the function. This should no longer apply. All ApAr 
+            #should be less than 1
+            if(area > 1):
+                area = 1           
+            previous_values_2['area'] = area
 
     else:
-        if trigger_id in ['cutoff-slider-2']:
+        if trigger_id in ['cutoff-slider-2', 'pD-slider-2']:
             # print(trigger_id)
             HoverB = H/B
             slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
@@ -654,9 +737,10 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             pLs = previous_values_2['pLs']
             pUs = previous_values_2['pUs']
             cutoff_optimal_pt = previous_values_2['cutoff_optimal_pt']
+            area = previous_values_2['area']
         else:
             
-            if trigger_id in ['{"index":2,"type":"upload-data"}', 'uTP-slider-2', 'uFP-slider-2', 'uTN-slider-2', 'uFN-slider-2', 'pD-slider-2', 'disease-mean-slider-2', 'disease-std-slider-2', 'healthy-mean-slider-2', 'healthy-std-slider-2']:
+            if trigger_id in ['{"index":2,"type":"upload-data"}', 'uTP-slider-2', 'uFP-slider-2', 'uTN-slider-2', 'uFN-slider-2', 'disease-mean-slider-2', 'disease-std-slider-2', 'healthy-mean-slider-2', 'healthy-std-slider-2']:
                 # print(trigger_id)
                 H = uTN - uFP
                 B = uTP - uFN + 0.000000001
@@ -690,8 +774,80 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
                 thresholds = np.array(thresholds)
                 if data_type == 'imported':
                     thresholds = np.where(thresholds > 1, 1, thresholds)
+                # print(len(pLs))
+                # print(len(thresholds))
                 thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+                area = 0
+                #calculate applicability area
+                for i, prior in enumerate(pLs):
+                    if i < len(pLs) - 1:
+                        if pLs[i] < pUs[i] and pLs[i + 1] < pUs[i + 1]:
+                            
+                            #find the range of priors
+                            rangePrior = pUs[i] - pLs[i]
+                            
+                            #check if it is the largest range of priors
+                            if rangePrior > largestRangePrior:
+                                largestRangePrior = rangePrior
+                                largestRangePriorThresholdIndex = i
+                                
+                            # trapezoidal rule (upper + lower base)/2
+                            avgRangePrior = (rangePrior + (pUs[i + 1] - pLs[i + 1])) / 2 
+                            
+                            #accumulate areas
+                            area += abs(avgRangePrior) * abs(thresholds[i + 1] - thresholds[i])
+                            
+                        #where pL and pU cross into pU > pL
+                        elif pLs[i] > pUs[i] and pLs[i + 1] < pUs[i + 1]:                
+                            x0 = thresholds[i]
+                            x1 = thresholds[i+1]
+                            if x0 != x1:
+                                pL0 = pLs[i]
+                                pL1 = pLs[i+1]
+                                pU0 = pUs[i]
+                                pU1 = pUs[i+1]
+                                x = sy.symbols('x')
+                                
+                                #solve for x and y at the intersection
+                                xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                                yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                                
+                                # trapezoidal rule (upper + lower base)/2
+                                avgRangePrior = (0 + (pUs[i + 1] - pLs[i + 1])) / 2
+                                
+                                #accumulate areas
+                                area += abs(avgRangePrior) * abs(thresholds[i + 1] - xIntersect[0])
+                            
+                        elif (pLs[i] < pUs[i] and pLs[i + 1] > pUs[i + 1]):
+                            x0 = thresholds[i]
+                            x1 = thresholds[i+1]
+                            if x0 != x1:
+                                pL0 = pLs[i]
+                                pL1 = pLs[i+1]
+                                pU0 = pUs[i]
+                                pU1 = pUs[i+1]
+                                x = sy.symbols('x')
+                                
+                                #solve for x and y at the intersection
+                                xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                                
+                                if len(xIntersect) == 0:
+                                    xIntersect = [0]
+                                    
+                                yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                                
+                                #accumulate areas
+                                avgRangePrior = (0 + (pUs[i] - pLs[i])) / 2 # trapezoidal rule (upper + lower base)/2
+                                area += abs(avgRangePrior) * abs(xIntersect[0] - thresholds[i + 1])
+                            
+                #round the calculation
+                area = np.round(float(area), 3)
                 
+                #due to minor calculation inaccuracies in the previous iterations of the function. This should no longer apply. All ApAr 
+                #should be less than 1
+                if(area > 1):
+                    area = 1           
+                previous_values_2['area'] = area
                 # print(pLs)
                 # if(pLs is None or pUs is None):
                 #     return go.Figure(), "", 0.5, True, '', '', '', '', '', '', '', '', ''
@@ -762,6 +918,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
         textangle=0
     )
 
+    # print(area)
     apar_fig.update_layout(
         title={
             'text': 'Applicable Area',
@@ -772,7 +929,24 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
         yaxis_title='Prior Probability (Prevalence)',
         xaxis=dict(tickmode='array', tickvals=np.arange(round(min(thresholds), 1), min(round(max(thresholds), 1), 5), step=0.1)),
         yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
-        template='plotly_white'
+        template='plotly_white',
+        annotations=[
+        dict(
+            x=0.95,
+            y=0.05,
+            xref='paper',
+            yref='paper',
+            text = f'AUC = {round(area, 3) if isinstance(area, (int, float)) else area}',
+            showarrow=False,
+            font=dict(
+                size=12,
+                color='black'
+            ),
+            align='right',
+            bgcolor='white',
+            bordercolor='black',
+            borderwidth=1
+        )]
     )
 
     initial_interval_disabled = initial_intervals >= 1
