@@ -5,7 +5,7 @@ def create_question_mark():
     return html.Div([
         # The question mark button
         html.Span(
-            "?", id="tooltip-target", 
+            "i", id="tooltip-target", 
             style={
                 "backgroundColor": "#478ECC",  # Color for the button
                 "color": "white",
@@ -16,7 +16,7 @@ def create_question_mark():
                 "alignItems": "center",
                 "justifyContent": "center",
                 "fontWeight": "bold",
-                "fontSize": "20px",  # Larger size for better visibility
+                "fontSize": "28px",  # Larger size for better visibility
                 "cursor": "pointer",
                 "padding": "5px"
             }

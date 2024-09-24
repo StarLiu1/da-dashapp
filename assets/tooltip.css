@@ -1,0 +1,28 @@
+/* assets/tooltip.css */
+.tooltip {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    z-index: 1000;
+    font-size: 12px;
+    white-space: nowrap;
+    width: 200px;  /* Adjust as necessary */
+    text-align: center;
+}
+
+.question-mark {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 5px;
+}
+
+.question-mark:hover + .tooltip {
+    display: block;
+    top: -40px; /* Adjust to control vertical positioning */
+    left: 0; /* Adjust to control horizontal positioning */
+}
