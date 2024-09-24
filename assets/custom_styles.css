@@ -22,3 +22,27 @@ ul {
     text-align: left; /* Align the team list to the left */
     display: inline-block; /* To ensure it's aligned in the center container */
 }
+
+/* Reset margins and padding globally */
+body, html, div {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Ensure footer is full-width and sticks to the bottom */
+.footer {
+    background-color: #012b75;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    width: 100%;
+    position: relative;
+    bottom: 0;
+    box-sizing: border-box;
+}
+/* When hovering over the question mark, show the tooltip
+div:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+} */

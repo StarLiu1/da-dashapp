@@ -11,6 +11,7 @@ from components.ClinicalUtilityProfiling import *
 from scipy.stats import norm
 from app import app
 from components.app_bar import create_app_bar
+from components.footer import create_footer  # Import the footer
 
 layout = html.Div([
     create_app_bar(),
@@ -120,7 +121,8 @@ layout = html.Div([
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
         dcc.Graph(id='apar-plot-2', config={'displayModeBar': True}, style={'width': '70%', 'paddingTop': '10px'}),
         # dcc.Graph(id='utility-plot-2', config={'displayModeBar': True}, style={'width': '37%'}),
-    ], style={'display': 'flex', 'width': '100%'}),
+        
+    ], style={'display': 'flex', 'width': '100%', "paddingLeft": "10px", "paddingTop": "5px"}),
     html.Div([
         dcc.Interval(id='initial-interval-2', interval=1000, n_intervals=0, max_intervals=1)
     ]),
@@ -137,6 +139,7 @@ layout = html.Div([
     dcc.Store(id='hsd-value-2'),
     # Store the dataframe in dcc.Store
     # dcc.Store(id='model-test-store-2', storage_type='session'),
+    create_footer()
 ])
 
 @app.callback(
