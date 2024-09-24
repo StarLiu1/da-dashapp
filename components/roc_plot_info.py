@@ -40,7 +40,7 @@ def create_roc_info_mark():
                 "borderRadius": "5px",
                 "position": "absolute",
                 "zIndex": "1000",
-                "top": "-80px",  # Adjust to position below the question mark
+                "top": "-120px",  # Adjust to position below the question mark
                 "left": "50%",
                 "transform": "translateX(-50%)",
                 "width": "200px",
