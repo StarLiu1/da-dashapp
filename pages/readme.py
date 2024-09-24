@@ -2,7 +2,15 @@
 from dash import html
 from components.app_bar import create_app_bar  # Import the app bar
 from components.footer import create_footer  # Import the footer
-from components.info_button import create_question_mark
+from components.info_button import create_info_mark, register_info_tooltip_callbacks
+from app import app
+import json
+
+# Load the JSON file with tooltip information
+with open("assets/tooltips.json", "r") as f:
+    tooltip_data = json.load(f)
+
+
 # Define the layout for the Read Me page
 layout = html.Div([
     # Include the app bar at the top
@@ -50,7 +58,8 @@ layout = html.Div([
         ], style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px'}),
 
     ]),
-    create_question_mark(),
+    create_info_mark(tooltip_id="readme", tooltip_text=tooltip_data['readme']['tooltip_text'], link_url=tooltip_data['readme']['link_url'], 
+                     top = "-120px", left = "50%", width = "200px"),
     # Add the footer at the bottom
     create_footer()
 ], style={
@@ -62,3 +71,6 @@ layout = html.Div([
             "minHeight": "100vh",  # Ensure the page takes up at least the full viewport height
             "justifyContent": "space-between",  # Space between content and footer
             })
+
+# Register the callbacks for the tooltips
+register_info_tooltip_callbacks(app, tooltip_id_list=["readme"])

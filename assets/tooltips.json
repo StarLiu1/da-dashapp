@@ -1,0 +1,14 @@
+{
+    "roc": {
+        "tooltip_text": "This is the first tooltip with some detailed information.",
+        "link_url": "https://example.com/1"
+    },
+    "utility": {
+        "tooltip_text": "Here is the second tooltip with different content.",
+        "link_url": "https://example.com/2"
+    },
+    "readme": {
+        "tooltip_text": "Info buttons like this will contain tips and resources.",
+        "link_url": "https://example.com/3"
+    }
+}

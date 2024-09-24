@@ -12,11 +12,14 @@ from scipy.stats import norm
 from app import app
 from components.app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
 from components.footer import create_footer  # Import the footer
-from components.roc_plot_info import create_roc_info_mark, register_roc_info_tooltip_callbacks  # Import the tooltip
+from components.info_button import create_info_mark, register_info_tooltip_callbacks
+import json
 
-# Add CSS for the menu interaction
+# Load the JSON file with tooltip information
+with open("assets/tooltips.json", "r") as f:
+    tooltip_data = json.load(f)
 
-
+# main layout
 layout = html.Div([
     create_app_bar(),
     # dcc.Link('Go to Page 2', href='/page-2'),
@@ -134,14 +137,43 @@ layout = html.Div([
                     
 
                     # The question mark
-                    create_roc_info_mark()
+                    # create_roc_info_mark()
+                    create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'], link_url=tooltip_data['roc']['link_url'], 
+                     top = "-120px", left = "50%", width = "200px"),
                 ]
             )
             
         ], style={'width': '33%', 'display': 'flex', 'flexDirection': 'column'}),
         # html.Div(id='roc-plot-info'),
 
-        dcc.Graph(id='utility-plot', style={'width': '37%'}),
+        html.Div([
+            dcc.Graph(id='utility-plot', style={'height': '92%'}),
+            html.Div(
+                style={
+                    "display": "flex",  # Flexbox layout to stack elements horizontally
+                    "alignItems": "center",  # Vertically center the items
+                },
+                children=[
+                    html.Div(style = {'width': '5%'}),
+                    # The button
+                    html.Button(
+                        'Switch to Line Mode', 
+                        id='toggle-draw-mode', 
+                        n_clicks=0, 
+                        style={'paddingBottom': '0', 'width': '70%', 'marginLeft': '5%'}
+                    ),
+                    html.Div(style = {'width': '5%'}),
+                    
+
+                    # The question mark
+                    create_info_mark(tooltip_id="utility", tooltip_text=tooltip_data['utility']['tooltip_text'], link_url=tooltip_data['utility']['link_url'], 
+                     top = "-120px", left = "0%", width = "200px"),
+                ]
+            )
+            
+        ], style={'width': '37%', 'display': 'flex', 'flexDirection': 'column'}),
+
+        # dcc.Graph(id='utility-plot', style={'width': '37%'}),
         
     ], style={'display': 'flex', 'width': '100%', "paddingLeft": "10px"}),
     
@@ -165,7 +197,7 @@ layout = html.Div([
     create_footer()
 ])
 
-register_roc_info_tooltip_callbacks(app)
+register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
 
 @app.callback(
     Output('input-fields', 'children'),
@@ -419,7 +451,8 @@ previous_values = {
     'tpr': [0, 0, 0],
     'thresholds': [0, 0, 0],
     'curve_fpr': [0, 0, 0],
-    'curve_tpr': [0, 0, 0]
+    'curve_tpr': [0, 0, 0],
+    'pauc': 0
 }
 
 roc_plot_group = go.Figure()
@@ -570,7 +603,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     curve_tpr = np.array(previous_values['curve_tpr'])
     curve_points = list(zip(curve_fpr, curve_tpr))
     auc = roc_auc_score(true_labels, predictions)
-    partial_auc = 0
+    # partial_auc = 0
     if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
@@ -647,7 +680,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         elif trigger_id in ['toggle-draw-mode'] and 'Point' in button_text:
             draw_mode = 'line'
             button_text = 'Switch to Point Mode (select operating point)'
-
+        partial_auc = previous_values['pauc']
         # print(f'draw mode is {draw_mode}')
     else:
         # print(trigger_id)
@@ -680,6 +713,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 button_text = 'Switch to Line Mode'
             # print(f'changed to {draw_mode}')
             # print(f'draw mode is {button_text}')
+            if trigger_id not in ['toggle-draw-mode', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider']:
+                partial_auc = 'Please redefine partial area'
+            else:
+                partial_auc = previous_values['pauc']
         elif trigger_id == 'roc-plot' and click_data:
 
             
@@ -813,8 +850,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                         f"Partial AUC in region bounded by FPR {x0:.2f} to {x1:.2f} and TPR {min_tpr:.2f} to {max_tpr:.2f} "
                         f"is {partial_auc:.4f}"
                     )
+                    previous_values['pauc'] = partial_auc
                 else:
                     partial_auc = "Click to add lines and calculate partial AUC."
+                    previous_values['pauc'] = partial_auc
 
                 # Update the ROC plot with new shapes
                 figure['layout']['shapes'] = shapes
@@ -840,6 +879,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 cutoff = closest_prob_cutoff
 
             else:
+                partial_auc = previous_values['pauc']
                 x = click_data['points'][0]['x']
                 y = click_data['points'][0]['y']
                 distances = np.sqrt((fpr - x) ** 2 + (tpr - y) ** 2)
@@ -864,6 +904,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 cutoff_optimal_pt = closest_prob_cutoff
         else:
             return dash.no_update
+
 
 
     # if 'Line' in button_text:
