@@ -453,7 +453,9 @@ previous_values = {
     'tpr': [0, 0, 0],
     'thresholds': [0, 0, 0],
     'curve_fpr': [0, 0, 0],
-    'curve_tpr': [0, 0, 0],
+    'curve_tpr': [0, 0.5, 0],
+    # 'curve_fpr': [0, 0.1, 0.2, 0.4, 0.6, 0.8, 1],
+    # 'curve_tpr': [0, 0.4, 0.5, 0.6, 0.8, 0.95, 1],
     'pauc': "Toggle line mode and select region of interest."
 }
 
@@ -562,22 +564,22 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
         thresholds = cleanThresholds(thresholds)
-        previous_values['predictions'] = predictions
-        previous_values['true_labels'] = true_labels
-        previous_values['fpr'] = fpr
-        previous_values['tpr'] = tpr
-        previous_values['thresholds'] = thresholds
+        # previous_values['predictions'] = predictions
+        # previous_values['true_labels'] = true_labels
+        # previous_values['fpr'] = fpr
+        # previous_values['tpr'] = tpr
+        # previous_values['thresholds'] = thresholds
     elif np.array_equal([0,0,0], previous_values['predictions']):
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
         predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
-        previous_values['predictions'] = predictions
-        previous_values['true_labels'] = true_labels
-        previous_values['fpr'] = fpr
-        previous_values['tpr'] = tpr
-        previous_values['thresholds'] = thresholds
+        # previous_values['predictions'] = predictions
+        # previous_values['true_labels'] = true_labels
+        # previous_values['fpr'] = fpr
+        # previous_values['tpr'] = tpr
+        # previous_values['thresholds'] = thresholds
         draw_mode = 'point'
         button_text = 'Switch to Line Mode'
     elif data_type == 'simulated' and not np.array_equal([0,0,0], previous_values['predictions']):
@@ -586,26 +588,37 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
-        previous_values['predictions'] = predictions
-        previous_values['true_labels'] = true_labels
-        previous_values['fpr'] = fpr
-        previous_values['tpr'] = tpr
-        previous_values['thresholds'] = thresholds
+        # previous_values['predictions'] = predictions
+        # previous_values['true_labels'] = true_labels
+        # previous_values['fpr'] = fpr
+        # previous_values['tpr'] = tpr
+        # previous_values['thresholds'] = thresholds
         # draw_mode = 'point'
         # button_text = 'Switch to Line Mode'
     elif data_type not in ['imported', 'simulated']:
         return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None, '', ''
-
-    predictions = previous_values['predictions']
-    true_labels = previous_values['true_labels']
-    fpr = np.array(previous_values['fpr'])
-    tpr = np.array(previous_values['tpr'])
-    thresholds = np.array(previous_values['thresholds'])
+    else:
+        predictions = previous_values['predictions']
+        true_labels = previous_values['true_labels']
+        fpr = np.array(previous_values['fpr'])
+        tpr = np.array(previous_values['tpr'])
+        thresholds = np.array(previous_values['thresholds'])
+        # print(np.array(previous_values['curve_fpr']))
+        curve_fpr = np.array(previous_values['curve_fpr'])
+        curve_tpr = np.array(previous_values['curve_tpr'])
+        curve_points = list(zip(curve_fpr, curve_tpr))
+        auc = roc_auc_score(true_labels, predictions)
+        partial_auc = 0
+    # predictions = previous_values['predictions']
+    # true_labels = previous_values['true_labels']
+    # fpr = np.array(previous_values['fpr'])
+    # tpr = np.array(previous_values['tpr'])
+    # thresholds = np.array(previous_values['thresholds'])
     # print(np.array(previous_values['curve_fpr']))
-    curve_fpr = np.array(previous_values['curve_fpr'])
-    curve_tpr = np.array(previous_values['curve_tpr'])
-    curve_points = list(zip(curve_fpr, curve_tpr))
-    auc = roc_auc_score(true_labels, predictions)
+    # curve_fpr = np.array(previous_values['curve_fpr'])
+    # curve_tpr = np.array(previous_values['curve_tpr'])
+    # curve_points = list(zip(curve_fpr, curve_tpr))
+    # auc = roc_auc_score(true_labels, predictions)
     # partial_auc = 0
     if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
         np.random.seed(123)
@@ -615,6 +628,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         auc = roc_auc_score(true_labels, predictions)
     # print(np.array_equal([0,0,0], previous_values['curve_fpr']))
     if (np.array_equal(predictions, previous_values['predictions']) and np.array_equal(true_labels, previous_values['true_labels']) and not np.array_equal([0,0,0], previous_values['curve_fpr'])):
+        # print("here???")
         predictions = previous_values['predictions']
         true_labels = previous_values['true_labels']
         auc = roc_auc_score(true_labels, predictions)
@@ -626,6 +640,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         curve_tpr = np.array(previous_values['curve_tpr'])
         curve_points = list(zip(curve_fpr, curve_tpr))
     else:
+        # print("correct guess")
         outer_idx = max_relative_slopes(fpr, tpr)[1]
         outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
         u_roc_fpr_fitted, u_roc_tpr_fitted = fpr[outer_idx], tpr[outer_idx]
@@ -688,6 +703,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     else:
         # print(trigger_id)
         if trigger_id in ['toggle-draw-mode', '{"index":0,"type":"upload-data"}', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
+            # print('right again')
             H = uTN - uFP
             B = uTP - uFN + 0.000000001
             HoverB = H/B
@@ -919,6 +935,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         lines = [shape for shape in roc_plot_group.layout.shapes if shape.type == 'line']
 
     roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
+    roc_fig.add_trace(go.Scatter(x=np.round(previous_values['curve_fpr'], 3), y=np.round(previous_values['curve_tpr'], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
     if 'Line' in button_text:
         roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value, 3)], y=[np.round(tpr_value, 3)], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
     roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
@@ -1014,7 +1031,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
     # Add a vertical line at x = pL
     # print(len(pL))
-    if len(pL) == 0:
+    if len(pL) == 0 or len(pU) == 0:
         pL = [0]
         pU = [0]
         pStar = [0]
