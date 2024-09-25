@@ -248,6 +248,10 @@ def update_input_fields_2(data_type):
         ])
     elif data_type == "imported":
         return html.Div([
+            dcc.ConfirmDialog(
+                message='Please make sure the file you upload has "true_labels" and "predictions" columns. Currently, we are limited to binary classification problems. Thank you for understanding!',
+                displayed=True,  # Initially hidden
+            ),
             dcc.Upload(
                 id={'type': 'upload-data', 'index': 2},
                 children=html.Div([
