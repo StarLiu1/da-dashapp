@@ -3,7 +3,7 @@ from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
 # Function to create the question mark and the tooltip
-def create_info_mark(tooltip_id, tooltip_text, link_url, top, left, width):
+def create_info_mark(tooltip_id, tooltip_text, link_text, link_url, top, left, width):
     return html.Div([
         # The question mark button
         html.Span(
@@ -29,7 +29,7 @@ def create_info_mark(tooltip_id, tooltip_text, link_url, top, left, width):
             id=f"custom-tooltip-{tooltip_id}",  # Unique ID for each tooltip
             children=[
                 html.Div(tooltip_text),
-                html.A("", href=link_url, target="_blank", style={"color": "lightblue", "textDecoration": "underline"})
+                html.A(link_text, href=link_url, target="_blank", style={"color": "lightblue", "textDecoration": "underline"})
             ],
             style={
                 "display": "none",  # Initially hidden

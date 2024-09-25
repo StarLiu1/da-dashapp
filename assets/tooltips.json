@@ -1,14 +1,22 @@
 {
     "roc": {
-        "tooltip_text": "This is the first tooltip with some detailed information.",
-        "link_url": "https://example.com/1"
+        "tooltip_text": "The ROC plot is interactive. In point mode, click to select different operating point. \n In line mode, select region of interest for partial AUC (constraining both TPR and FPR). The 1st click plots a horizontal line and 2nd click plots a vertical line.",
+        "link_text": "",
+        "link_url": ""
     },
     "utility": {
-        "tooltip_text": "Here is the second tooltip with different content.",
-        "link_url": "https://example.com/2"
+        "tooltip_text": "This plot reflects ",
+        "link_text": "the Pauker-Kassier threshold approach to clinical decision making.",
+        "link_url": "https://pubmed.ncbi.nlm.nih.gov/7366635/"
+    },
+    "apar": {
+        "tooltip_text": "The ApAr communicates the range of prior probability and test cutoffs for which the model has positive utility (in other words, useful)",
+        "link_text": "Accepted Manuscript at AMIA 2023",
+        "link_url": "https://pubmed.ncbi.nlm.nih.gov/38222359/"
     },
     "readme": {
         "tooltip_text": "Didn't believe me, did ya?",
+        "link_text": "",
         "link_url": ""
     }
 }

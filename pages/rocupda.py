@@ -138,8 +138,10 @@ layout = html.Div([
 
                     # The question mark
                     # create_roc_info_mark()
-                    create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'], link_url=tooltip_data['roc']['link_url'], 
-                     top = "-120px", left = "50%", width = "200px"),
+                    create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'],
+                                    link_text = tooltip_data['roc']['link_text'],
+                                    link_url=tooltip_data['roc']['link_url'], 
+                                    top = "-250px", left = "50%", width = "200px"),
                 ]
             )
             
@@ -154,20 +156,12 @@ layout = html.Div([
                     "alignItems": "center",  # Vertically center the items
                 },
                 children=[
-                    html.Div(style = {'width': '5%'}),
-                    # The button
-                    html.Button(
-                        'Switch to Line Mode', 
-                        id='toggle-draw-mode', 
-                        n_clicks=0, 
-                        style={'paddingBottom': '0', 'width': '70%', 'marginLeft': '5%'}
-                    ),
-                    html.Div(style = {'width': '5%'}),
-                    
-
+                    html.Div(style = {'width': '80%'}),
                     # The question mark
-                    create_info_mark(tooltip_id="utility", tooltip_text=tooltip_data['utility']['tooltip_text'], link_url=tooltip_data['utility']['link_url'], 
-                     top = "-120px", left = "0%", width = "200px"),
+                    create_info_mark(tooltip_id="utility", tooltip_text=tooltip_data['utility']['tooltip_text'],
+                                    link_text = tooltip_data['utility']['link_text'],
+                                    link_url=tooltip_data['utility']['link_url'], 
+                                    top = "-105px", left = "0%", width = "200px"),
                 ]
             )
             
@@ -194,7 +188,11 @@ layout = html.Div([
     dcc.Store(id='hsd-value'),
     dcc.Store(id='roc-store'),
     # dcc.Store(id='drawing-mode', data=False)
-    create_footer()
+    create_footer(), 
+    dcc.ConfirmDialog(
+                message='Welcome to the home dashboard! Graphics can take up to 20 seconds on initial load. Subsequent loading will be faster (~3-5 seconds). Thank you for your patience!',
+                displayed=True,  # Initially hidden
+            ),
 ])
 
 register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
@@ -452,7 +450,7 @@ previous_values = {
     'thresholds': [0, 0, 0],
     'curve_fpr': [0, 0, 0],
     'curve_tpr': [0, 0, 0],
-    'pauc': 0
+    'pauc': "Toggle line mode and select region of interest."
 }
 
 roc_plot_group = go.Figure()
@@ -541,6 +539,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             slider_cutoff = 0.5
         draw_mode = 'point'
         button_text = 'Switch to Line Mode'
+
         
     # print(f'data type is {data_type}')
     if (data_type == 'imported' and upload_contents): 
@@ -937,7 +936,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         template='plotly_white',
         annotations=[
         dict(
-            x=0.95,
+            x=1,
             y=0.05,
             xref='paper',
             yref='paper',
@@ -953,7 +952,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             borderwidth=1
         ),
         dict(
-            x=0.95,
+            x=1,
             y=0.1,
             xref='paper',
             yref='paper',

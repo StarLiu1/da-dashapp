@@ -12,9 +12,16 @@ from scipy.stats import norm
 from app import app
 from components.app_bar import create_app_bar
 from components.footer import create_footer  # Import the footer
+from components.info_button import create_info_mark, register_info_tooltip_callbacks
+import json
+
+# Load the JSON file with tooltip information
+with open("assets/tooltips.json", "r") as f:
+    tooltip_data = json.load(f)
 
 layout = html.Div([
     create_app_bar(),
+    
     # html.Div([
     #     # html.Div([
     #     #     dcc.Dropdown(
@@ -119,7 +126,26 @@ layout = html.Div([
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
-        dcc.Graph(id='apar-plot-2', config={'displayModeBar': True}, style={'width': '70%', 'paddingTop': '10px'}),
+
+        html.Div([
+            dcc.Graph(id='apar-plot-2', style={'height': '92%'}),
+            html.Div(
+                style={
+                    "display": "flex",  # Flexbox layout to stack elements horizontally
+                    "alignItems": "center",  # Vertically center the items
+                },
+                children=[
+                    html.Div(style = {'width': '80%'}),
+                    # The question mark
+                    create_info_mark(tooltip_id="apar", tooltip_text=tooltip_data['apar']['tooltip_text'],
+                                    link_text = tooltip_data['apar']['link_text'],
+                                    link_url=tooltip_data['apar']['link_url'], 
+                                    top = "-185px", left = "50%", width = "200px"),
+                ]
+            )
+            
+        ], style={'width': '70%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '50px'}),
+
         # dcc.Graph(id='utility-plot-2', config={'displayModeBar': True}, style={'width': '37%'}),
         
     ], style={'display': 'flex', 'width': '100%', "paddingLeft": "10px", "paddingTop": "5px"}),
@@ -139,8 +165,14 @@ layout = html.Div([
     dcc.Store(id='hsd-value-2'),
     # Store the dataframe in dcc.Store
     # dcc.Store(id='model-test-store-2', storage_type='session'),
-    create_footer()
+    create_footer(),
+    dcc.ConfirmDialog(
+                message='Graphics can take up to a minute. Thank you for your patience! We will make it better!',
+                displayed=True,  # Initially hidden
+            ),
 ])
+
+register_info_tooltip_callbacks(app, tooltip_id_list=["apar"])
 
 @app.callback(
     Output('input-fields-2', 'children'),
@@ -238,7 +270,7 @@ def update_input_fields_2(data_type):
             # ConfirmDialog for the popup
             dcc.ConfirmDialog(
                 id='upload-popup-2',
-                message='The data has been successfully uploaded. Please wait 3 seconds and select a cutoff to get started.',
+                message='Data uploaded. Graphics can take up to 50 seconds for inital load. Subsequent wait time between 5-25 seconds. Thank you for your patience!',
                 displayed=False,  # Initially hidden
             ),
             

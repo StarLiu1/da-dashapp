@@ -22,11 +22,11 @@ layout = html.Div([
         # "About this dashboard" section
         html.H1("About this dashboard", style={"marginBottom": "0px", "fontSize": "50px"}),
         html.P([
-            "Driven by decision analysis and utility theory, this dashboard is designed to provide an ",
+            "Driven by decision analysis and utility theory, we built an ",
             html.B("intuitive and interactive"), 
-            " interface for visualizing machine learning (ML) models in the context of clinical decision-making. We have built various ",
-            "visualizations to help analyze ", 
-            html.B("the utility of clinical predictive models and their success and failure modes in the target context"), 
+            " dashboard for visualizing",
+            " and analyzing the", 
+            html.B(" utility of machine learning (ML) models and their success and failure modes in the target context"), 
             "."
         ], style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px'}),
 
@@ -64,9 +64,10 @@ layout = html.Div([
             html.A("Applicability Area (ApAr)", href="https://pubmed.ncbi.nlm.nih.gov/38222359/", target="_blank"), 
             " is a decision-analytic and utility-based approach to evaluating clinical predictive models that communicates ",
             html.B("the range of prior probability and test cutoffs for which the model has positive utility (in other words, useful)"),
-            "."
+            ".",
+            html.Br(),
+            "* loading time varies between 5 ~ 50 seconds"
         ], style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px'}),
-
 
         # "Info button" section
         # html.H1("Info Buttons", style={"marginTop": "30px", "marginBottom": "0px"}),
@@ -79,8 +80,9 @@ layout = html.Div([
             create_info_mark(
                 tooltip_id="readme",
                 tooltip_text=tooltip_data['readme']['tooltip_text'],
+                link_text = tooltip_data['readme']['link_text'],
                 link_url=tooltip_data['readme']['link_url'],
-                top="-50px",
+                top="-20px",
                 left="150px",
                 width="200px"
             )
