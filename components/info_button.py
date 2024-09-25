@@ -29,7 +29,7 @@ def create_info_mark(tooltip_id, tooltip_text, link_url, top, left, width):
             id=f"custom-tooltip-{tooltip_id}",  # Unique ID for each tooltip
             children=[
                 html.Div(tooltip_text),
-                html.A("Click here for more info", href=link_url, target="_blank", style={"color": "lightblue", "textDecoration": "underline"})
+                html.A("", href=link_url, target="_blank", style={"color": "lightblue", "textDecoration": "underline"})
             ],
             style={
                 "display": "none",  # Initially hidden

@@ -21,12 +21,14 @@ layout = html.Div([
 
         # "About this dashboard" section
         html.H1("About this dashboard", style={"marginBottom": "0px", "fontSize": "50px"}),
-        html.P("""
-            Driven by decision analysis and utility theory, this dashboard is designed to provide an intuitive and interactive interface 
-            for visualizing machine learning models in the context of clinical decision-making. Various 
-            visualizations help analyze the utility of clinical predictive models and their success and failure modes in the 
-            target context.
-        """, style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px'}),
+        html.P([
+            "Driven by decision analysis and utility theory, this dashboard is designed to provide an ",
+            html.B("intuitive and interactive"), 
+            " interface for visualizing machine learning (ML) models in the context of clinical decision-making. We have built various ",
+            "visualizations to help analyze ", 
+            html.B("the utility of clinical predictive models and their success and failure modes in the target context"), 
+            "."
+        ], style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px'}),
 
         # "Team" section
         html.H1("Team", style={"marginTop": "5px", "marginBottom": "0px"}),
@@ -39,27 +41,58 @@ layout = html.Div([
         ], style={"listStyleType": "none", "marginTop": "0", "fontSize": "18px", "lineHeight": "1.6"}),
 
         # "Main Dashboard" section
-        html.H1("Main Dashboard", style={"marginTop": "20px", "marginBottom": "0px"}),
-        html.P("""
-            The core team includes:
-        """, style={"fontSize": "28px", "lineHeight": "1.6", "marginTop": "0px"}),
-
-        # "Applicable Area" section
-        html.H1("Applicable Area (ApAr)", style={"marginTop": "30px", "marginBottom": "0px"}),
+        html.H1("Main Dashboard", style={"marginTop": "10px", "marginBottom": "0px"}),
         html.P([
-            html.A("Applicability Area (ApAr)", href="https://pubmed.ncbi.nlm.nih.gov/38222359/", target="_blank"), 
-            " is a decision-analytic, utility-based approach to evaluating predictive models that communicates the range ",
-            "of prior probability and test cutoffs for which the model has positive utility (useful). We recommend using this ",
-            html.A("dashboard", href="/apar", target="_blank"), 
-            " together with the ",
+            html.A("The home dashboard", href="/", target="_blank"), 
+            " presents typical machine learning evaluation with a touch of decision analysis, ", 
+            html.B("examining the utility of different operating points on the ROC given harms and benefits (expressed in utility 0 to 1)"),
+            ". The default simulation mode is",
+            " geared towards educational demonstrations.",
+            html.B(" The 'Imported Data' mode is suitable for a decision analytic evaluation of real world ML model performance"), 
+            " (currently limited to binary classification problems). ", 
+            html.B("We recommend"),
+            " using the ",
             html.A("main dashboard", href="/", target="_blank"), 
-            " to get a complete",
-            " picture of model applicability. \n"
+            " together with the ",
+            html.A("Applicability Area (ApAr) dashboard", href="/apar", target="_blank"), 
+            " to get a complete assessment of model performance and applicability."
         ], style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px'}),
 
+        # "Applicable Area" section
+        html.H1("Applicable Area (ApAr) Dashboard", style={"marginTop": "30px", "marginBottom": "0px"}),
+        html.P([
+            html.A("Applicability Area (ApAr)", href="https://pubmed.ncbi.nlm.nih.gov/38222359/", target="_blank"), 
+            " is a decision-analytic and utility-based approach to evaluating clinical predictive models that communicates ",
+            html.B("the range of prior probability and test cutoffs for which the model has positive utility (in other words, useful)"),
+            "."
+        ], style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px'}),
+
+
+        # "Info button" section
+        # html.H1("Info Buttons", style={"marginTop": "30px", "marginBottom": "0px"}),
+        html.Div([
+            html.H1(
+                "Hover over info buttons like this one for additional tips and resources",
+                style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px', "display": "inline-block", "verticalAlign": "middle"}
+            ),
+            # The button (using your create_info_mark function)
+            create_info_mark(
+                tooltip_id="readme",
+                tooltip_text=tooltip_data['readme']['tooltip_text'],
+                link_url=tooltip_data['readme']['link_url'],
+                top="-50px",
+                left="150px",
+                width="200px"
+            )
+        ], style={
+            "display": "flex",        # Flexbox layout
+            "alignText": "center",   # Vertically center content within the div
+            "justifyContent": "center",  # Horizontally center content within the div
+            "gap": "10px" ,            # Space between the text and the button
+            "paddingBottom": "0px"
+        })
     ]),
-    create_info_mark(tooltip_id="readme", tooltip_text=tooltip_data['readme']['tooltip_text'], link_url=tooltip_data['readme']['link_url'], 
-                     top = "-120px", left = "50%", width = "200px"),
+    
     # Add the footer at the bottom
     create_footer()
 ], style={
