@@ -13,13 +13,32 @@ from app import app
 from components.app_bar import create_app_bar
 from components.footer import create_footer  # Import the footer
 from components.info_button import create_info_mark, register_info_tooltip_callbacks
+from components.loading_component import create_loading_overlay
+
 import json
 
 # Load the JSON file with tooltip information
 with open("assets/tooltips.json", "r") as f:
     tooltip_data = json.load(f)
 
+loadingText = "Welcome to the home dashboard!\nThis specific set of graphics can take up to a minute. Thank you for your patience! We will make it better!\n\nClick anywhere to dismiss or this message will disappear automatically."
+
+# Callback to hide the loading overlay either after 3 seconds or on click
+@app.callback(
+    Output('apar-loading-overlay', 'style'),
+    [Input('apar-loading-overlay', 'n_clicks'),
+     Input('apar-loading-overlay-interval', 'n_intervals')],
+    prevent_initial_call=True
+)
+def hide_loading_overlay(n_clicks, n_intervals):
+    # If the overlay is clicked or 3 seconds have passed (n_intervals >= 1), hide the overlay
+    if n_clicks or n_intervals >= 1:
+        return {"display": "none"}  # Hides the overlay
+    return dash.no_update  # Keep the overlay if nothing has happened yet
+
+
 layout = html.Div([
+    create_loading_overlay(unique_id = 'apar-loading-overlay', loading_text=loadingText),
     create_app_bar(),
     
     # html.Div([
@@ -126,25 +145,76 @@ layout = html.Div([
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
-
+        
         html.Div([
-            dcc.Graph(id='apar-plot-2', style={'height': '92%'}),
+            # Add back the loading spinner with graph
+            dcc.Loading(
+                id="loading",
+                type="default",  # Spinner type
+                fullscreen=False,  # Restrict spinner to the graph area
+                children=[
+                    dcc.Graph(
+                        id='apar-plot-2',
+                        style={
+                            'height': '92vh',  # Full height for the graph (92% of viewport)
+                            'width': '70vw',  # Full width of the viewport
+                        }
+                    )
+                ]
+            ),
+
+            # Bottom div for the question mark info
             html.Div(
                 style={
-                    "display": "flex",  # Flexbox layout to stack elements horizontally
+                    "display": "flex",  # Flexbox layout for horizontal alignment
                     "alignItems": "center",  # Vertically center the items
+                    "height": "8vh",  # Remaining 8% of the viewport height
+                    "width": "100%",  # Full width
+                    "marginTop": "-5%"
                 },
                 children=[
-                    html.Div(style = {'width': '80%'}),
-                    # The question mark
-                    create_info_mark(tooltip_id="apar", tooltip_text=tooltip_data['apar']['tooltip_text'],
-                                    link_text = tooltip_data['apar']['link_text'],
-                                    link_url=tooltip_data['apar']['link_url'], 
-                                    top = "-185px", left = "50%", width = "200px"),
+                    html.Div(style={'width': '80%'}),  # Empty space div for layout
+                    create_info_mark(
+                        tooltip_id="apar",
+                        tooltip_text=tooltip_data['apar']['tooltip_text'],
+                        link_text=tooltip_data['apar']['link_text'],
+                        link_url=tooltip_data['apar']['link_url'], 
+                        top="-205px", left="50%", width="200px"
+                    ),
                 ]
             )
+        ], style={
+            'height': '100vh',  # Full viewport height
+            'width': '70%',  # Full viewport width
+            'display': 'flex',
+            'flexDirection': 'column',  # Stack vertically
+            'marginTop': '45px'  # Remove any top margin
+        })
+
+
+
+        # html.Div([
+        #     # dcc.Graph(id='apar-plot-2', style={'height': '92%'}),
+        #     # dcc.Graph(id='ap', style={'height': '92%'}),
+
+        #     html.Div(
+        #         style={
+        #             "display": "flex",  # Flexbox layout to stack elements horizontally
+        #             "alignItems": "center",  # Vertically center the items
+        #             "height": "8%"
+        #         },
+        #         children=[
+        #             html.Div(style = {'width': '80%'}),
+        #             # The question mark
+        #             create_info_mark(tooltip_id="apar", tooltip_text=tooltip_data['apar']['tooltip_text'],
+        #                             link_text = tooltip_data['apar']['link_text'],
+        #                             link_url=tooltip_data['apar']['link_url'], 
+        #                             top = "-185px", left = "50%", width = "200px"),
+        #         ]
+        #     )
             
-        ], style={'width': '70%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '50px'}),
+        # ], style={'width': '70%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '50px'}),
+        
 
         # dcc.Graph(id='utility-plot-2', config={'displayModeBar': True}, style={'width': '37%'}),
         
@@ -166,10 +236,10 @@ layout = html.Div([
     # Store the dataframe in dcc.Store
     # dcc.Store(id='model-test-store-2', storage_type='session'),
     create_footer(),
-    dcc.ConfirmDialog(
-                message='Graphics can take up to a minute. Thank you for your patience! We will make it better!',
-                displayed=True,  # Initially hidden
-            ),
+    # dcc.ConfirmDialog(
+    #             message='Graphics can take up to a minute. Thank you for your patience! We will make it better!',
+    #             displayed=True,  # Initially hidden
+    #         ),
 ])
 
 register_info_tooltip_callbacks(app, tooltip_id_list=["apar"])
@@ -975,7 +1045,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             y=0.05,
             xref='paper',
             yref='paper',
-            text = f'AUC = {round(area, 3) if isinstance(area, (int, float)) else area}',
+            text = f'ApAr = {round(area, 3) if isinstance(area, (int, float)) else area}',
             showarrow=False,
             font=dict(
                 size=12,

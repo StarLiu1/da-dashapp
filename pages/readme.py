@@ -73,7 +73,7 @@ layout = html.Div([
         # html.H1("Info Buttons", style={"marginTop": "30px", "marginBottom": "0px"}),
         html.Div([
             html.H1(
-                "Hover over info buttons like this one for additional tips and resources",
+                "Click on info buttons like this one for additional tips and resources",
                 style={"fontSize": "28px", "lineHeight": "1.6", 'marginTop': '0px', "display": "inline-block", "verticalAlign": "middle"}
             ),
             # The button (using your create_info_mark function)

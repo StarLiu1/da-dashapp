@@ -13,14 +13,31 @@ from app import app
 from components.app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
 from components.footer import create_footer  # Import the footer
 from components.info_button import create_info_mark, register_info_tooltip_callbacks
+from components.loading_component import create_loading_overlay
 import json
 
 # Load the JSON file with tooltip information
 with open("assets/tooltips.json", "r") as f:
     tooltip_data = json.load(f)
 
+loadingText = "Welcome to the home dashboard!\nGraphics can take up to 20 seconds on initial load. Subsequent loading will be faster (~3-5 seconds).\nThank you for your patience!\n\nClick anywhere to dismiss or this message will disappear automatically."
+
+# Callback to hide the loading overlay either after 3 seconds or on click
+@app.callback(
+    Output('roc-loading-overlay', 'style'),
+    [Input('roc-loading-overlay', 'n_clicks'),
+     Input('roc-loading-overlay-interval', 'n_intervals')],
+    prevent_initial_call=True
+)
+def hide_loading_overlay(n_clicks, n_intervals):
+    # If the overlay is clicked or 3 seconds have passed (n_intervals >= 1), hide the overlay
+    if n_clicks or n_intervals >= 1:
+        return {"display": "none"}  # Hides the overlay
+    return dash.no_update  # Keep the overlay if nothing has happened yet
+
 # main layout
 layout = html.Div([
+    create_loading_overlay(unique_id = 'roc-loading-overlay', loading_text=loadingText),
     create_app_bar(),
     # dcc.Link('Go to Page 2', href='/page-2'),
     html.Div([
@@ -35,7 +52,18 @@ layout = html.Div([
             ),
             html.Div(id='input-fields', style={'width': '95%'}),
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '50px'}),
-        html.Div(dcc.Graph(id='distribution-plot'), style={'width': '70%', 'paddingTop': '50px'})
+        # html.Div(dcc.Graph(id='distribution-plot'), style={'width': '70%', 'paddingTop': '50px'})
+        html.Div(
+                dcc.Loading(
+                    id="loading",
+                    type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
+                    fullscreen=False,  # This will show the loading spinner across the entire page
+                    children=[
+                        dcc.Graph(id='distribution-plot')
+                ])
+                , style={'width': '70%', 'paddingTop': '50px'
+        })
+        
     ], style={'display': 'flex', 'width': '100%', "paddingLeft": "10px", "paddingTop": "0px"}),
     html.Div([
         
@@ -118,7 +146,13 @@ layout = html.Div([
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
         html.Div([
-            dcc.Graph(id='roc-plot', style={'height': '92%'}),
+            dcc.Loading(
+                id="loading",
+                type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
+                fullscreen=False,  # This will show the loading spinner across the entire page
+                children=[
+                    dcc.Graph(id='roc-plot', style={'height': '100%'}),
+            ]),
             html.Div(
                 style={
                     "display": "flex",  # Flexbox layout to stack elements horizontally
@@ -128,7 +162,7 @@ layout = html.Div([
                     html.Div(style = {'width': '5%'}),
                     # The button
                     html.Button(
-                        'Switch to Line Mode', 
+                        'Switch to Line Mode (select region for partial AUC)', 
                         id='toggle-draw-mode', 
                         n_clicks=0, 
                         style={'paddingBottom': '0', 'width': '70%', 'marginLeft': '5%'}
@@ -141,19 +175,26 @@ layout = html.Div([
                     create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'],
                                     link_text = tooltip_data['roc']['link_text'],
                                     link_url=tooltip_data['roc']['link_url'], 
-                                    top = "-250px", left = "50%", width = "200px"),
+                                    top = "-215px", left = "50%", width = "200px"),
                 ]
             )
             
-        ], style={'width': '33%', 'display': 'flex', 'flexDirection': 'column'}),
+        ], style={'width': '33%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '50px'}),
         # html.Div(id='roc-plot-info'),
 
         html.Div([
-            dcc.Graph(id='utility-plot', style={'height': '92%'}),
+            dcc.Loading(
+                id="loading",
+                type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
+                fullscreen=False,  # This will show the loading spinner across the entire page
+                children=[
+                    dcc.Graph(id='utility-plot', style={'height': '100%'}),
+            ]),
             html.Div(
                 style={
                     "display": "flex",  # Flexbox layout to stack elements horizontally
                     "alignItems": "center",  # Vertically center the items
+                    "height": "8%"
                 },
                 children=[
                     html.Div(style = {'width': '80%'}),
@@ -165,7 +206,7 @@ layout = html.Div([
                 ]
             )
             
-        ], style={'width': '37%', 'display': 'flex', 'flexDirection': 'column'}),
+        ], style={'width': '37%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '45px'}),
 
         # dcc.Graph(id='utility-plot', style={'width': '37%'}),
         
@@ -189,10 +230,10 @@ layout = html.Div([
     dcc.Store(id='roc-store'),
     # dcc.Store(id='drawing-mode', data=False)
     create_footer(), 
-    dcc.ConfirmDialog(
-                message='Welcome to the home dashboard! Graphics can take up to 20 seconds on initial load. Subsequent loading will be faster (~3-5 seconds). Thank you for your patience!',
-                displayed=True,  # Initially hidden
-            ),
+    # dcc.ConfirmDialog(
+    #             message='Welcome to the home dashboard! Graphics can take up to 20 seconds on initial load. Subsequent loading will be faster (~3-5 seconds). Thank you for your patience!',
+    #             displayed=True,  # Initially hidden
+    #         ),
 ])
 
 register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
@@ -536,7 +577,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         healthy_std = 1
         figure = None
         draw_mode = 'point'
-        button_text = 'Switch to Line Mode'
+        button_text = 'Switch to Line Mode (select region for partial AUC)'
 
     if trigger_id == 'initial-interval':
         if initial_intervals == 0:
@@ -544,7 +585,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         elif initial_intervals == 1:
             slider_cutoff = 0.5
         draw_mode = 'point'
-        button_text = 'Switch to Line Mode'
+        button_text = 'Switch to Line Mode (select region for partial AUC)'
 
         
     # print(f'data type is {data_type}')
@@ -581,7 +622,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         # previous_values['tpr'] = tpr
         # previous_values['thresholds'] = thresholds
         draw_mode = 'point'
-        button_text = 'Switch to Line Mode'
+        button_text = 'Switch to Line Mode (select region for partial AUC)'
     elif data_type == 'simulated' and not np.array_equal([0,0,0], previous_values['predictions']):
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
@@ -726,10 +767,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             # print(button_text)
             if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
                 draw_mode = 'point'
-                button_text = 'Switch to Point Mode'
+                button_text = 'Switch to Point Mode (select operating point)'
             elif trigger_id in ['toggle-draw-mode'] and 'Point' in button_text:
                 draw_mode = 'line'
-                button_text = 'Switch to Line Mode'
+                button_text = 'Switch to Line Mode (select region for partial AUC)'
             # print(f'changed to {draw_mode}')
             # print(f'draw mode is {button_text}')
             if trigger_id not in ['toggle-draw-mode', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider']:
