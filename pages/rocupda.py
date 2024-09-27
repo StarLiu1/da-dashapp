@@ -313,7 +313,7 @@ def update_input_fields(data_type):
     elif data_type == "imported":
         return html.Div([
             dcc.ConfirmDialog(
-                message='Please make sure the file you upload has "true_labels" and "predictions" columns. Currently, we are limited to binary classification problems. Thank you for understanding!',
+                message='Please make sure the CSV file you upload has "true_labels" and "predictions" columns. Currently, we are limited to binary classification problems. Thank you for understanding!',
                 displayed=True,  # Initially hidden
             ),
             dcc.Upload(
@@ -336,11 +336,11 @@ def update_input_fields(data_type):
             ),
             
             # ConfirmDialog for the popup
-            dcc.ConfirmDialog(
-                id='upload-popup',
-                message='Data uploaded. Graphics loading...',
-                displayed=False,  # Initially hidden
-            ),
+            # dcc.ConfirmDialog(
+            #     id='upload-popup',
+            #     message='Data uploaded. Graphics loading...',
+            #     displayed=False,  # Initially hidden
+            # ),
             
             # Dynamic content area
             html.Div(id={'type': 'dynamic-output', 'index': 0}),
@@ -975,7 +975,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
         lines = [shape for shape in roc_plot_group.layout.shapes if shape.type == 'line']
 
-    roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
+    roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue'), fill = 'tonexty'))
     roc_fig.add_trace(go.Scatter(x=np.round(previous_values['curve_fpr'], 3), y=np.round(previous_values['curve_tpr'], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
     if 'Line' in button_text:
         roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value, 3)], y=[np.round(tpr_value, 3)], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))

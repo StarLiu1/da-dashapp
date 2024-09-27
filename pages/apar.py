@@ -21,7 +21,7 @@ import json
 with open("assets/tooltips.json", "r") as f:
     tooltip_data = json.load(f)
 
-loadingText = "Welcome to the home dashboard!\nThis specific set of graphics can take up to a minute. Thank you for your patience! We will make it better!\n\nClick anywhere to dismiss or this message will disappear automatically."
+loadingText = "Welcome to the home dashboard!\nThis specific graph can take up to a minute. Thank you for your patience! We will make it better!\n\nClick anywhere to dismiss or this message will disappear automatically."
 
 # Callback to hide the loading overlay either after 3 seconds or on click
 @app.callback(
