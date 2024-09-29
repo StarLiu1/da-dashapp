@@ -228,6 +228,7 @@ layout = html.Div([
     dcc.Store(id='hm-value'),
     dcc.Store(id='hsd-value'),
     dcc.Store(id='roc-store'),
+    dcc.Store(id='shape-store', data=[]),
     # dcc.Store(id='drawing-mode', data=False)
     create_footer(), 
     # dcc.ConfirmDialog(
@@ -524,6 +525,7 @@ imported = False
     Output('roc-store', 'data'),
     # Output('roc-plot-info', 'children'),
     Output('toggle-draw-mode', 'children'),  # New output to update button text
+    Output('shape-store', 'data'),
     Input('cutoff-slider', 'value'), 
     Input('roc-plot', 'clickData'), 
     Input('uTP-slider', 'value'), 
@@ -539,13 +541,15 @@ imported = False
     Input('healthy-std-slider', 'value'),
     Input('initial-interval', 'n_intervals'),
     Input('toggle-draw-mode', 'n_clicks'),  # New input for button clicks
+    
     [State('roc-plot', 'figure'),
      State('roc-store', 'data'),
      State('toggle-draw-mode', 'children'),
      State('data-type-dropdown', 'value')],
+     State('shape-store', 'data'),
     prevent_initial_call='initial_duplicate'
 )
-def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, initial_intervals, n_clicks, figure, roc_store, button_text, current_mode):
+def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, initial_intervals, n_clicks, figure, roc_store, button_text, current_mode, shape_store):
     global previous_values
     global imported
     global roc_plot_group
@@ -555,11 +559,16 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     ctx = dash.callback_context
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-
+    # Clear the saved figure when switching modes
     if mode_status != current_mode:
-        roc_plot_group = go.Figure()  # Clear the saved figure when switching modes
+        roc_plot_group = go.Figure()  
+        figure = roc_plot_group
+        figure.update_layout()
         mode_status = current_mode
         changed = True
+
+    # clear or extract shapes
+    shapes = shape_store if shape_store else []
 
     info_text = ''
     if not ctx.triggered:
@@ -588,7 +597,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         button_text = 'Switch to Line Mode (select region for partial AUC)'
 
         
-    # print(f'data type is {data_type}')
+    # based on mode
     if (data_type == 'imported' and upload_contents): 
         if upload_contents[0] is None:
             contents = 'data:text/csv;base64,None'
@@ -605,39 +614,30 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
         thresholds = cleanThresholds(thresholds)
-        # previous_values['predictions'] = predictions
-        # previous_values['true_labels'] = true_labels
-        # previous_values['fpr'] = fpr
-        # previous_values['tpr'] = tpr
-        # previous_values['thresholds'] = thresholds
+
+    # if on initial load or when the predictions are the default values
     elif np.array_equal([0,0,0], previous_values['predictions']):
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
         predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
-        # previous_values['predictions'] = predictions
-        # previous_values['true_labels'] = true_labels
-        # previous_values['fpr'] = fpr
-        # previous_values['tpr'] = tpr
-        # previous_values['thresholds'] = thresholds
         draw_mode = 'point'
         button_text = 'Switch to Line Mode (select region for partial AUC)'
+
+    # if we are in simulation mode and have already loaded an example
     elif data_type == 'simulated' and not np.array_equal([0,0,0], previous_values['predictions']):
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
         predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
-        # previous_values['predictions'] = predictions
-        # previous_values['true_labels'] = true_labels
-        # previous_values['fpr'] = fpr
-        # previous_values['tpr'] = tpr
-        # previous_values['thresholds'] = thresholds
-        # draw_mode = 'point'
-        # button_text = 'Switch to Line Mode'
+    
+    # if entered a mode not in the list, return nothing
     elif data_type not in ['imported', 'simulated']:
-        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None, '', ''
+        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None, '', '', None
+   
+    # otherwise, use previously saved data
     else:
         predictions = previous_values['predictions']
         true_labels = previous_values['true_labels']
@@ -650,24 +650,16 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         curve_points = list(zip(curve_fpr, curve_tpr))
         auc = roc_auc_score(true_labels, predictions)
         partial_auc = 0
-    # predictions = previous_values['predictions']
-    # true_labels = previous_values['true_labels']
-    # fpr = np.array(previous_values['fpr'])
-    # tpr = np.array(previous_values['tpr'])
-    # thresholds = np.array(previous_values['thresholds'])
-    # print(np.array(previous_values['curve_fpr']))
-    # curve_fpr = np.array(previous_values['curve_fpr'])
-    # curve_tpr = np.array(previous_values['curve_tpr'])
-    # curve_points = list(zip(curve_fpr, curve_tpr))
-    # auc = roc_auc_score(true_labels, predictions)
-    # partial_auc = 0
+
+    # if we change the simulation parameters
     if trigger_id in ['disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider']:
         np.random.seed(123)
         true_labels = np.random.choice([0, 1], 1000)
         predictions = np.where(true_labels == 1, np.random.normal(disease_mean, disease_std, 1000), np.random.normal(healthy_mean, healthy_std, 1000))
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
-    # print(np.array_equal([0,0,0], previous_values['curve_fpr']))
+    
+    # again, if predictions and labels have not changed, then
     if (np.array_equal(predictions, previous_values['predictions']) and np.array_equal(true_labels, previous_values['true_labels']) and not np.array_equal([0,0,0], previous_values['curve_fpr'])):
         # print("here???")
         predictions = previous_values['predictions']
@@ -680,24 +672,30 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         curve_fpr = np.array(previous_values['curve_fpr'])
         curve_tpr = np.array(previous_values['curve_tpr'])
         curve_points = list(zip(curve_fpr, curve_tpr))
+
+    # if predictions or labels have changed, then proceed with calculations to update the data
     else:
-        # print("correct guess")
+        
+        # Bezier curve
         outer_idx = max_relative_slopes(fpr, tpr)[1]
         outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
         u_roc_fpr_fitted, u_roc_tpr_fitted = fpr[outer_idx], tpr[outer_idx]
         u_roc_fpr_fitted, u_roc_tpr_fitted = deduplicate_roc_points(u_roc_fpr_fitted, u_roc_tpr_fitted)
-
+        
+        # control points from the convex hull
         control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
         empirical_points = list(zip(fpr, tpr))
         initial_weights = [1] * len(control_points)
         bounds = [(0, 20) for _ in control_points]
 
+        # optimize the weights for fitting
         result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
         optimal_weights = result.x
 
         curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
         curve_points = np.array(list(curve_points_gen)) 
 
+        # save results 
         previous_values['predictions'] = predictions
         previous_values['true_labels'] = true_labels
         previous_values['fpr'] = fpr
@@ -706,9 +704,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         previous_values['curve_fpr'] = curve_points[:,0]
         previous_values['curve_tpr'] = curve_points[:,1]
 
-
+    # on initial load trigger
     if not ctx.triggered or trigger_id == 'initial-interval':
-        # print('suspicion true')
+        # load default simulation parameters
         slider_cutoff = 0.5
         tpr_value = np.sum((np.array(true_labels) == 1) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 1)
         fpr_value = np.sum((np.array(true_labels) == 0) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 0)
@@ -732,7 +730,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr_value_optimal_pt = original_fpr
         cutoff_optimal_pt = closest_prob_cutoff
 
-        # print(trigger_id)
+        # drawing mode status
         if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
             draw_mode = 'point'
             button_text = 'Switch to Line Mode (select region for partial AUC)'
@@ -740,9 +738,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             draw_mode = 'line'
             button_text = 'Switch to Point Mode (select operating point)'
         partial_auc = previous_values['pauc']
-        # print(f'draw mode is {draw_mode}')
+        
     else:
-        # print(trigger_id)
+        # on subsequent loads, if the trigger is one of the below
         if trigger_id in ['toggle-draw-mode', '{"index":0,"type":"upload-data"}', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
             # print('right again')
             H = uTN - uFP
@@ -763,29 +761,27 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
             fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
             cutoff = slider_cutoff
-            # print(draw_mode)
-            # print(button_text)
+            
+            # change button status
             if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
                 draw_mode = 'point'
                 button_text = 'Switch to Point Mode (select operating point)'
             elif trigger_id in ['toggle-draw-mode'] and 'Point' in button_text:
                 draw_mode = 'line'
                 button_text = 'Switch to Line Mode (select region for partial AUC)'
-            # print(f'changed to {draw_mode}')
-            # print(f'draw mode is {button_text}')
+
+            # change pauc display message
             if trigger_id not in ['toggle-draw-mode', 'cutoff-slider', 'uTP-slider', 'uFP-slider', 'uTN-slider', 'uFN-slider', 'pD-slider']:
                 partial_auc = 'Please redefine partial area'
             else:
                 partial_auc = previous_values['pauc']
-        elif trigger_id == 'roc-plot' and click_data:
-
             
-            # print(f'button text is {button_text}')
-            # print(trigger_id)
-            # print(button_text)
+        # otherwise, if the trigger is an action on the roc plot
+        elif trigger_id == 'roc-plot' and click_data:
 
             #if we are in line mode
             if 'Point' in button_text:
+
                 if not roc_store:
                     return dash.no_update
                 
@@ -794,29 +790,69 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
                 # Initialize shapes if not already present
                 shapes = figure.get('layout', {}).get('shapes', [])
-
+                # print(len(shapes))
                 x_clicked = click_data['points'][0]['x']
                 y_clicked = click_data['points'][0]['y']
 
+                # identify lines near the point clicked
                 tolerance = 0.02
                 line_exists = any(
-                    shape['type'] == 'line' and (abs(shape['x0'] - x_clicked) < tolerance or abs(shape['y0'] - y_clicked) < tolerance)
+                    shape['type'] == 'line' and 
+                    (
+                        (shape['x0'] == 0 and shape['x1'] == 1 and abs(shape['y0'] - y_clicked) < tolerance) or 
+                        (shape['y0'] == 0 and shape['y1'] == 1 and abs(shape['x0'] - x_clicked) < tolerance)
+                    )
                     for shape in shapes
                 )
 
+                # if line exists near the point clicked, then remove the line
                 if line_exists:
-                    # If line exists, remove it
-                    shapes = [
-                        shape for shape in shapes 
-                        if not (
-                            shape['type'] == 'line' and (
-                                (shape['x0'] == 0 and shape['x1'] == 1 and abs(shape['y0'] - y_clicked) < tolerance) or
-                                (shape['y0'] == 0 and shape['y1'] == 1 and abs(shape['x0'] - x_clicked) < tolerance)
-                            )
+                    # If line exists, remove it (shapes)
+                    shapes = [shape for shape in shapes if not (
+                        shape['type'] == 'line' and (
+                            (shape['x0'] == 0 and shape['x1'] == 1 and abs(shape['y0'] - y_clicked) < tolerance) or
+                            (shape['y0'] == 0 and shape['y1'] == 1 and abs(shape['x0'] - x_clicked) < tolerance)
                         )
+                    )]
+                    # Remove filled traces if corresponding lines are removed
+                    traces_to_keep = [
+                        trace for trace in figure.get('data', []) 
+                        if 'fill' not in trace  # Only keep traces without 'fill' property
                     ]
+                    figure['data'] = traces_to_keep
+                            
+                    # Now remove all filled traces (those with 'fill' attribute)
+                    # print(f"Line exists, removing it and all fills.")
 
+                    # Remove all filled traces (those with 'fill' attribute)
+                    traces_to_keep = []
+                    for trace in figure.get('data', {}):
+                        # Check if the trace has the 'fill' attribute and remove it
+                        if 'fill' in trace:
+                            # print(f"Removing filled trace: {trace['name'] if 'name' in trace else 'Unnamed Trace'}")
+                            continue  # Skip filled traces (removing them)
+                        else:
+                            traces_to_keep.append(trace)  # Keep other traces
+
+                    # Clear out figure's traces and re-add only the ones to keep
+                    figure['data'] = []  # Reset the figure's data
+                    figure = go.Figure(figure)
+                    for trace in traces_to_keep:
+                        figure.add_trace(trace)
+
+                    # Update the layout to ensure only the lines (shapes) remain, without fills
+                    # Remove shapes that are not lines
+                    shapes_without_fills = [shape for shape in shapes if shape['type'] == 'line']
+
+                    # Update the layout with only the lines (no fills)
+                    figure.update_layout(shapes=shapes_without_fills)
+
+                    # if line_exists == True:
+                    shapes = shapes_without_fills
+
+                # if there aren't any shapes
                 elif len(shapes) == 0:
+
                     # Add a new horizontal line if there are no lines
                     shapes.append({
                         'type': 'line',
@@ -830,7 +866,11 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                             'dash': 'dash',
                         }
                     })
+                    
+                # if there is exactly one line, horizontal or vertical
                 elif len(shapes) == 1:
+
+                    # if the existing line is vertical, add horizontal
                     if (shapes[0]['y0'] == 0 and shapes[0]['y1'] == 1):
                         shapes.append({
                             'type': 'line',
@@ -844,7 +884,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                                 'dash': 'dash',
                             }
                         })
-                    else:# Add a new line if there are no lines
+                        
+                    # otherwise, add vertical
+                    else:
                         shapes.append({
                             'type': 'line',
                             'x0': x_clicked,
@@ -857,8 +899,15 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                                 'dash': 'dash',
                             }
                         })
-                    
+
+                # Update the figure with new shapes
+                figure['layout']['shapes'] = shapes       
+                
+                # if we have exactly 2 lines, then fill region of interest and calculate the partial AUC
                 if len(shapes) == 2:
+                    x_fill = []  # Store the x-values to fill
+                    y_fill = []  # Store the y-values to fill
+
                     # Calculate partial AUC if two lines are present
                     if shapes[0]['y1'] < shapes[1]['y1']:
                         #horizontal shape
@@ -875,14 +924,23 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                         x0 = shapes[1]['x0']
                         y0 = shapes[1]['y0']
 
+                    # identify the border of the region of interest for coloring
                     idx_lower = (np.abs(tpr - y0)).argmin()
                     idx_upper = (np.abs(fpr - x1)).argmin()
 
                     lowerX = fpr[idx_lower]
                     upperX = fpr[idx_upper]
 
-                    # if x0 > x1:
-                    #     x0, x1 = x1, x0
+                    for i in range(len(fpr)):
+                        if lowerX <= fpr[i] <= upperX:
+                            x_fill.append(fpr[i])
+                            y_fill.append(tpr[i])
+
+                    # Add the bottom right point and the first point again to close the 'loop'
+                    x_fill.append(fpr[idx_upper])
+                    y_fill.append(tpr[idx_lower])
+                    x_fill.append(fpr[idx_lower])
+                    y_fill.append(tpr[idx_lower])
 
                     # Find the indices of the region bounded by the lower TPR and upper FPR
                     indices = np.where((fpr >= lowerX) & (fpr <= upperX))[0]
@@ -911,13 +969,18 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                         f"is {partial_auc:.4f}"
                     )
                     previous_values['pauc'] = partial_auc
+
+                # otherwise, display reminder
                 else:
                     partial_auc = "Click to add lines and calculate partial AUC."
                     previous_values['pauc'] = partial_auc
 
-                # Update the ROC plot with new shapes
-                figure['layout']['shapes'] = shapes
 
+                if line_exists:
+                # Update the ROC plot with new shapes
+                    figure['layout']['shapes'] = shapes_without_fills
+                else:
+                    figure['layout']['shapes'] = shapes
                 roc_plot_group = go.Figure(figure)
 
                 H = uTN - uFP
@@ -938,6 +1001,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 tpr_value = tpr_value_optimal_pt
                 cutoff = closest_prob_cutoff
 
+            # if we are in regular point selection mode
             else:
                 partial_auc = previous_values['pauc']
                 x = click_data['points'][0]['x']
@@ -962,31 +1026,137 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 tpr_value_optimal_pt = original_tpr
                 fpr_value_optimal_pt = original_fpr
                 cutoff_optimal_pt = closest_prob_cutoff
+        
+        # if not action trigger on the roc plot
         else:
             return dash.no_update
+    
+    # print(button_text)
 
+    # remove filled area if we are switching back to point mode
+    if trigger_id == 'toggle-draw-mode' and 'Line' in button_text:
 
+        # Remove the 'Filled Area' trace
+        traces_to_keep = [
+            trace for trace in roc_plot_group.data
+            if trace.name.strip() != 'Filled Area'
+        ]
+        
+        # Create a new figure with the remaining traces
+        roc_plot_group = go.Figure(data=traces_to_keep, layout=roc_plot_group.layout)
 
-    # if 'Line' in button_text:
+    else:
+
+        # otherwise, if we are in line mode and there was an action trigger on the roc-plot
+        if (trigger_id == 'roc-plot' and 'Point' in button_text):
+            
+            # if object exists
+            if roc_plot_group:
+
+                shapes = roc_plot_group['layout']['shapes']
+
+                if len(shapes) == 2:
+
+                    # Create a new scatter trace to fill the area
+                    filled_area_trace = go.Scatter(
+                        x=x_fill,
+                        y=y_fill,
+                        fill='toself',  # Fill the area enclosed by the lines
+                        mode='lines',
+                        line=dict(color='rgba(0,0,0,0)'),  # Make the boundary transparent
+                        fillcolor='rgba(0, 100, 200, 0.3)',  # Set the fill color with transparency
+                        name='Filled Area'
+                    )
+
+    # initiate new figure instance
     roc_fig = go.Figure()
+
+    # roc_fig.update_layout(shapes=unique_shapes)
     # else:
     #     roc_fig = roc_plot_group
-    # Extract the lines from the saved figure
-    if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
-        lines = [shape for shape in roc_plot_group.layout.shapes if shape.type == 'line']
 
-    roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue'), fill = 'tonexty'))
-    roc_fig.add_trace(go.Scatter(x=np.round(previous_values['curve_fpr'], 3), y=np.round(previous_values['curve_tpr'], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
+    # Extract the lines from the saved figure, if the model has changed
+    if trigger_id in ['{"index":0,"type":"upload-data"}', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
+        roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
+        roc_fig.add_trace(go.Scatter(x=np.round(curve_points[:,0], 3), y=np.round(curve_points[:,1], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
+        roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
+
+    # otherwise, bring in saved shapes and lines
+    else:
+        # Filter out the lines where the name is not "ROC Curve", "Bezier Curve", or "Optimal Cutoff Point"
+        if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
+            lines = [
+                shape for shape in roc_plot_group.layout.shapes 
+                if shape['type'] == 'line' and 
+                shape.get('name') not in ['ROC Curve', 'Bezier Curve', 'Optimal Cutoff Point']
+            ]
+
+        # Ensure that only one ROC curve and one Bezier curve are present
+        # roc_fig.data = [trace for trace in roc_fig.data if trace.name not in ['ROC Curve', 'Bezier Curve']]
+        # Step 1: Remove any existing ROC Curve, Bezier Curve, and Optimal Cutoff Point
+        roc_fig.data = [
+            trace for trace in roc_plot_group.data 
+            if trace.name not in ['ROC Curve', 'Bezier Curve', 'Optimal Cutoff Point', 'Cutoff Point']
+        ]
+
+        # Add ROC Curve (if not already present)
+        roc_curve_exists = any(trace.name == 'ROC Curve' for trace in roc_plot_group.data)
+        if not roc_curve_exists:
+            roc_fig.add_trace(go.Scatter(
+                x=np.round(fpr, 3), 
+                y=np.round(tpr, 3), 
+                mode='lines', 
+                name='ROC Curve', 
+                line=dict(color='blue')
+            ))
+
+        # Add Bezier Curve (if not already present)
+        bezier_curve_exists = any(trace.name == 'Bezier Curve' for trace in roc_plot_group.data)
+        # print(bezier_curve_exists)
+        if not bezier_curve_exists:
+            roc_fig.add_trace(go.Scatter(
+                x=np.round(previous_values['curve_fpr'], 3), 
+                y=np.round(previous_values['curve_tpr'], 3), 
+                mode='lines', 
+                name='Bezier Curve', 
+                line=dict(color='blue')
+            ))
+
+        optimal_point_exists = any(trace.name == 'Optimal Cutoff Point' for trace in roc_plot_group.data)
+        # Add the optimal cutoff point (if not already present)
+        if not optimal_point_exists:
+            roc_fig.add_trace(go.Scatter(
+                x=[np.round(fpr_value_optimal_pt, 3)], 
+                y=[np.round(tpr_value_optimal_pt, 3)], 
+                mode='markers', 
+                name='Optimal Cutoff Point', 
+                marker=dict(color='red', size=10)
+            ))
+
+    # Update the figure with the new shapes
+    # roc_fig.update_layout(shapes=shapes)
+    # roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
+    # roc_fig.add_trace(go.Scatter(x=np.round(previous_values['curve_fpr'], 3), y=np.round(previous_values['curve_tpr'], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
+    
+    # if we are in point mode, add the cutoff point
     if 'Line' in button_text:
         roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value, 3)], y=[np.round(tpr_value, 3)], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
-    roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
+    # roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
 
+    # add back in previous extracted lines for partial auc
     if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
         # Add the extracted lines to the new figure
         roc_fig.update_layout(
             shapes=lines  # Add the extracted lines
         )
 
+    # Now extract any traces with 'fill' from roc_plot_group and add them to roc_fig
+    if hasattr(roc_plot_group, 'data') and roc_plot_group.data:
+        for trace in roc_plot_group.data:
+            if 'fill' in trace:  # Check if the trace has a 'fill' property
+                roc_fig.add_trace(trace)
+
+    # update figure with configurations and texts
     roc_fig.update_layout(
         title={
             'text': 'Receiver Operating Characteristic (ROC) Curve',
@@ -1035,6 +1205,18 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         margin=dict(l=30, r=20, t=30, b=10),
     )
 
+    # add fill
+    if (trigger_id == 'toggle-draw-mode' and 'Line' in button_text) == False:
+        if trigger_id == 'roc-plot' and 'Point' in button_text:
+            if roc_plot_group:
+                # print(roc_plot_group)
+                # shapes = figure.get('layout', {}).get('shapes', [])
+                shapes = roc_plot_group['layout']['shapes']
+                if len(shapes) == 2:
+                # Add the filled area trace
+                    roc_fig.add_trace(filled_area_trace)
+
+    # display texts for the sliders and markers
     disease_m_text = f"Disease Mean: {disease_mean:.2f}"
     disease_sd_text = f"Disease Standard Deviation: {disease_std:.2f}"
     healthy_m_text = f"Healthy Mean: {healthy_mean:.2f}"
@@ -1047,14 +1229,16 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     pDisease_text = f"Disease Prevalence: {pD:.2f}"
     optimal_cutoff_text = f"H/B of {HoverB:.2f} gives a slope of {slope_of_interest:.2f} at the optimal cutoff point {cutoff_optimal_pt:.2f}"
 
+    # utility graph lines
     p_values = np.linspace(0, 1, 100)
     line1 = p_values * uTP + (1 - p_values) * uFP
     line2 = p_values * uFN + (1 - p_values) * uTN
     line3 = p_values * tpr_value * uTP + p_values * (1 - tpr_value) * uFN + (1 - p_values) * fpr_value * uFP + (1 - p_values) * (1-fpr_value) * uTN
     line4 = p_values * tpr_value_optimal_pt * uTP + p_values * (1 - tpr_value_optimal_pt) * uFN + (1 - p_values) * fpr_value_optimal_pt * uFP + (1 - p_values) * (1-fpr_value_optimal_pt) * uTN
 
-
+    # solve for pL, pStar, and pU
     xVar = sy.symbols('xVar')
+
     #solve for upper threshold formed by test and treat all
     pU = sy.solve(treatAll(xVar, uFP, uTP) - test(xVar, tpr_value, 1-fpr_value, uTN, uTP, uFN, uFP, 0), xVar)
 
@@ -1064,6 +1248,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     #solve for lower threshold formed by treat none and test
     pL = sy.solve(treatNone(xVar, uFN, uTN) - test(xVar, tpr_value, 1-fpr_value, uTN, uTP, uFN, uFP, 0), xVar)
 
+    # initiate figure instance and populate data
     utility_fig = go.Figure()
     utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line1, 3), mode='lines', name='Treat All', line=dict(color='green')))
     utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line2, 3), mode='lines', name='Treat None', line=dict(color='orange')))
@@ -1071,12 +1256,13 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line4, 3), mode='lines', name='Optimal Cutoff', line=dict(color='red')))
 
     # Add a vertical line at x = pL
-    # print(len(pL))
+    # if the list is not empty
     if len(pL) == 0 or len(pU) == 0:
         pL = [0]
         pU = [0]
         pStar = [0]
 
+    # Add a vertical line at x = pL
     utility_fig.add_trace(go.Scatter(
         x=[float(pL[0]), float(pL[0])],  # Same x value for both points to create a vertical line
         y=[0, 1],  # Full height of the y-axis
@@ -1115,6 +1301,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         textangle=0
     )
 
+    # add pStar annotation
     utility_fig.add_annotation(
         x=float(pStar[0]),
         y=0,
@@ -1126,6 +1313,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         textangle=0
     )
 
+    # add pU annotation
     utility_fig.add_annotation(
         x=float(pU[0]),
         y=0,
@@ -1137,6 +1325,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         textangle=0
     )
     
+    # figure configurations
     utility_fig.update_layout(
         title={
             'text': 'Expected Utility Plot for treat all, treat none, and test',
@@ -1151,6 +1340,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         margin=dict(l=30, r=20, t=30, b=70),
     )
 
+    # distributions plots depending on the mode
     if data_type == 'imported' and upload_contents or (upload_contents and trigger_id == 'imported-interval'):
         distribution_fig = go.Figure()
         # distribution_fig.add_trace(go.Histogram(x=predictions, name='Diseased', opacity=0.75, marker=dict(color='grey')))
@@ -1235,13 +1425,6 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             margin=dict(l=30, r=20, t=50, b=0),
         )
 
-
-    # Creating the dataframe
-    modelTest = pd.DataFrame({
-        'tpr': tpr,
-        'fpr': fpr,
-        'thresholds': thresholds
-    })
     #store roc data for partial roc calculation
     roc_data = {
         'fpr': fpr.tolist(),  # Convert to list to ensure JSON serializability
@@ -1251,13 +1434,14 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     # print(modelTest_json)
     initial_interval_disabled = initial_intervals >= 1
 
+    # set default
     if current_mode == 'imported' and slider_cutoff >= 1:
         slider_cutoff = 0.5
 
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
              utility_fig, distribution_fig, initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
-                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, button_text)#, modelTest_json)
+                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, button_text, shapes)
 
 
 @app.callback(
