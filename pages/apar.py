@@ -66,10 +66,10 @@ layout = html.Div([
                     ],
                     value='simulated'
                 ),
-                html.Div(id='input-fields-2', style={'width': '95%'}),
-            ], style={'paddingTop': '45px'}),
+                html.Div(id='input-fields-2', style={'width': '100%'}),
+            ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '55px'}),
             html.Div([
-                html.H4(id='cutoff-value-2', children='Raw Cutoff: ', style={'marginTop': 5}),
+                html.H4(id='cutoff-value-2', children='Raw Cutoff: ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='cutoff-slider-2',
@@ -80,8 +80,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks = {i: f'{i:.1f}' for i in range(-5, 6)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='utp-value-2', children='Utility of true positive (uTP): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='utp-value-2', children='Utility of true positive (uTP): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTP-slider-2',
@@ -92,8 +92,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='ufp-value-2', children='Utility of false positive (uFP): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='ufp-value-2', children='Utility of false positive (uFP): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFP-slider-2',
@@ -104,8 +104,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='utn-value-2', children='Utility of true negative (uTN): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='utn-value-2', children='Utility of true negative (uTN): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTN-slider-2',
@@ -116,8 +116,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='ufn-value-2', children='Utility of false negative (uFN): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='ufn-value-2', children='Utility of false negative (uFN): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFN-slider-2',
@@ -128,8 +128,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='pd-value-2', children='Disease Prevalence: ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='pd-value-2', children='Disease Prevalence: ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='pD-slider-2',
@@ -140,8 +140,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i: str(np.round(i,1)) for i in np.arange(0, 1, 0.1)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='optimalcutoff-value-2', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='optimalcutoff-value-2', style={'marginTop': 5, 'marginBottom': 5}),
 
             ], style={'displayModeBar': True})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
@@ -184,7 +184,7 @@ layout = html.Div([
                 ]
             )
         ], style={
-            'height': '100vh',  # Full viewport height
+            # 'height': '100vh',  # Full viewport height
             'width': '70%',  # Full viewport width
             'display': 'flex',
             'flexDirection': 'column',  # Stack vertically
@@ -218,7 +218,7 @@ layout = html.Div([
 
         # dcc.Graph(id='utility-plot-2', config={'displayModeBar': True}, style={'width': '37%'}),
         
-    ], style={'display': 'flex', 'width': '100%', "paddingLeft": "10px", "paddingTop": "5px"}),
+    ], style={'height': '100vh', 'display': 'flex', 'width': '100%', "paddingLeft": "10px", "paddingTop": "5px", 'flexDirection': 'row'}),
     html.Div([
         dcc.Interval(id='initial-interval-2', interval=1000, n_intervals=0, max_intervals=1)
     ]),
@@ -240,7 +240,7 @@ layout = html.Div([
     #             message='Graphics can take up to a minute. Thank you for your patience! We will make it better!',
     #             displayed=True,  # Initially hidden
     #         ),
-])
+], style={'overflow-x': 'hidden'})
 
 register_info_tooltip_callbacks(app, tooltip_id_list=["apar"])
 
@@ -257,18 +257,18 @@ def update_input_fields_2(data_type):
                     'To upload data, select "Import Data" from dropdown'
                 ]),
                 style={
-                    'width': '100%',
+                    'width': '99%',
                     'height': '60px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
                     'borderStyle': 'dashed',
                     'borderRadius': '5px',
                     'textAlign': 'center',
-                    'margin': '10px'
+                    'paddingRight': '0px'
                 },
             ),
             html.Div([
-                html.H4(id='dm-value-2', children='Disease Mean: ', style={'marginTop': 5}),
+                html.H4(id='dm-value-2', children='Disease Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-mean-slider-2',
                     min=-3,
@@ -278,9 +278,9 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider-2',
                     min=0.1,
@@ -290,9 +290,9 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 5}),
+                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider-2',
                     min=-3,
@@ -302,9 +302,9 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider-2',
                     min=0.1,
@@ -314,8 +314,8 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
-        ])
+            ], style={'width': '100%'}),
+        ], style={'marginTop': -10})
     elif data_type == "imported":
         return html.Div([
             dcc.ConfirmDialog(
@@ -329,7 +329,7 @@ def update_input_fields_2(data_type):
                     html.A('Select Files')
                 ]),
                 style={
-                    'width': '100%',
+                    'width': '99%',
                     'height': '60px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
@@ -352,7 +352,7 @@ def update_input_fields_2(data_type):
             html.Div(id={'type': 'dynamic-output2', 'index': 2}),
             dcc.Interval(id={'type': 'interval-component2', 'index': 2}, interval=2000, n_intervals=0, disabled=True),
             html.Div([
-                html.H4(id='dm-value-2', children='Disease Mean: ', style={'marginTop': 5}),
+                html.H4(id='dm-value-2', children='Disease Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-mean-slider-2',
                     min=-3,
@@ -362,9 +362,9 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider-2',
                     min=0.1,
@@ -374,9 +374,9 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 5}),
+                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider-2',
                     min=-3,
@@ -386,9 +386,9 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider-2',
                     min=0.1,
@@ -398,10 +398,10 @@ def update_input_fields_2(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             dcc.Store(id='min-threshold-store-2'),
             dcc.Store(id='max-threshold-store-2'),
-        ])
+        ], style={'marginTop': 10})
 
 @app.callback(
     Output('upload-popup-2', 'displayed'),

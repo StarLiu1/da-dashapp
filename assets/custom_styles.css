@@ -47,3 +47,18 @@ div:hover .tooltip-content {
     opacity: 1;
 } */
 
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns, flexible width */
+    grid-template-rows: auto; /* Rows will automatically adjust */
+    gap: 10px; /* Space between items */
+    justify-content: center; /* Center items horizontally */
+    align-items: center; /* Center items vertically */
+    height: 100vh; /* Optional, full-height container */
+}
+
+.grid-container > div {
+    padding: 20px;
+    background-color: lightgray;
+    text-align: center;
+}

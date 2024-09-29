@@ -41,35 +41,23 @@ layout = html.Div([
     create_app_bar(),
     # dcc.Link('Go to Page 2', href='/page-2'),
     html.Div([
-        html.Div([
-            dcc.Dropdown(
-                id='data-type-dropdown',
-                options=[
-                    {'label': 'Simulated Binormal Model', 'value': 'simulated'},
-                    {'label': 'Imported Data', 'value': 'imported'}
-                ],
-                value='simulated'
-            ),
-            html.Div(id='input-fields', style={'width': '95%'}),
-        ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '50px'}),
-        # html.Div(dcc.Graph(id='distribution-plot'), style={'width': '70%', 'paddingTop': '50px'})
-        html.Div(
-                dcc.Loading(
-                    id="loading",
-                    type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
-                    fullscreen=False,  # This will show the loading spinner across the entire page
-                    children=[
-                        dcc.Graph(id='distribution-plot')
-                ])
-                , style={'width': '70%', 'paddingTop': '50px'
-        })
         
-    ], style={'display': 'flex', 'width': '100%', "paddingLeft": "10px", "paddingTop": "0px"}),
-    html.Div([
+        # html.Div(dcc.Graph(id='distribution-plot'), style={'width': '70%', 'paddingTop': '50px'})
         
         html.Div([
             html.Div([
-                html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 5}),
+                dcc.Dropdown(
+                    id='data-type-dropdown',
+                    options=[
+                        {'label': 'Simulated Binormal Model', 'value': 'simulated'},
+                        {'label': 'Imported Data', 'value': 'imported'}
+                    ],
+                    value='simulated'
+                ),
+                html.Div(id='input-fields', style={'width': '100%', 'padding': 0}),
+            ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '60px'}),
+            html.Div([
+                html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='cutoff-slider',
@@ -80,8 +68,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks = {i: f'{i:.1f}' for i in range(-5, 6)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='utp-value', children='Utility of true positive (uTP): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='utp-value', children='Utility of true positive (uTP): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTP-slider',
@@ -92,8 +80,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='ufp-value', children='Utility of false positive (uFP): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='ufp-value', children='Utility of false positive (uFP): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFP-slider',
@@ -104,8 +92,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='utn-value', children='Utility of true negative (uTN): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='utn-value', children='Utility of true negative (uTN): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uTN-slider',
@@ -116,8 +104,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='ufn-value', children='Utility of false negative (uFN): ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='ufn-value', children='Utility of false negative (uFN): ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='uFN-slider',
@@ -128,8 +116,8 @@ layout = html.Div([
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i/10: f'{i/10:.1f}' for i in range(11)}
                     )
-                ], style={'width': 550}),
-                html.H4(id='pd-value', children='Disease Prevalence: ', style={'marginTop': 5}),
+                ], style={'width': '100%'}),
+                html.H4(id='pd-value', children='Disease Prevalence: ', style={'marginTop': 5, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='pD-slider',
@@ -138,83 +126,120 @@ layout = html.Div([
                         step=0.01,
                         value=0.5,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i: str(np.round(i,1)) for i in np.arange(0, 1, 0.1)}
+                        marks={i: str(np.round(i,1)) for i in np.arange(0, 1, 0.1)},
+                        
                     )
-                ], style={'width': 550}),
+                ], style={'width': '100%'}),
                 html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
 
             ], style={'displayModeBar': True})
-        ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
+        ], style={'height': '100%', 'width': '30%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
         html.Div([
-            dcc.Loading(
-                id="loading",
-                type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
-                fullscreen=False,  # This will show the loading spinner across the entire page
-                children=[
-                    dcc.Graph(id='roc-plot', style={'height': '100%'}),
-            ]),
-            html.Div(
-                style={
-                    "display": "flex",  # Flexbox layout to stack elements horizontally
-                    "alignItems": "center",  # Vertically center the items
-                },
-                children=[
-                    html.Div(style = {'width': '5%'}),
-                    # The button
-                    html.Button(
-                        'Switch to Line Mode (select region for partial AUC)', 
-                        id='toggle-draw-mode', 
-                        n_clicks=0, 
-                        style={'paddingBottom': '0', 'width': '70%', 'marginLeft': '5%'}
+            html.Div([
+                html.Div(
+                        dcc.Loading(
+                            id="loading",
+                            type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
+                            fullscreen=False,  # This will show the loading spinner across the entire page
+                            children=[
+                                dcc.Graph(id='distribution-plot', style={'height': '45vh'})
+                        ])
+                        , style={'width': '100%', 'paddingTop': '50px'
+                })
+            ], style={'height': '50%', 'display': 'flex', 'flexDirection': 'row', 'marginTop': '0px'}),
+            html.Div([
+                html.Div([
+                    html.Div(
+                        style={
+                            # "display": "flex",  # Flexbox layout to stack elements horizontally
+                            # 'flexDirection': 'column',
+                            "alignItems": "center",  # Vertically center the items
+                            'height': '95%',
+                            'margin': 0
+                        },
+                        children=[
+                            dcc.Loading(
+                                id="loading",
+                                type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
+                                fullscreen=False,  # This will show the loading spinner across the entire page
+                                style={
+                                    # "display": "flex",  # Flexbox layout to stack elements horizontally
+                                    # 'flexDirection': 'column',
+                                    'margin': 0
+                                },
+                                children=[
+                                    dcc.Graph(id='roc-plot', style={'height': '47vh', "width": "35vw"}),
+                                ]
+                            )  
+                        ]
                     ),
-                    html.Div(style = {'width': '5%'}),
                     
+                    html.Div(
+                        style={
+                            "display": "flex",  # Flexbox layout to stack elements horizontally
+                            "alignItems": "center",  # Vertically center the items
+                            'height': '5%',
+                            'margin': 0
+                        },
+                        children=[
+                            html.Div(style = {'width': '5%'}),
+                            # The button
+                            html.Button(
+                                'Switch to Line Mode (select region for partial AUC)', 
+                                id='toggle-draw-mode', 
+                                n_clicks=0, 
+                                style={'paddingBottom': '0', 'width': '70%', 'marginLeft': '5%'}
+                            ),
+                            html.Div(style = {'width': '5%'}),
+                            
 
-                    # The question mark
-                    # create_roc_info_mark()
-                    create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'],
-                                    link_text = tooltip_data['roc']['link_text'],
-                                    link_url=tooltip_data['roc']['link_url'], 
-                                    top = "-215px", left = "50%", width = "200px"),
-                ]
-            )
-            
-        ], style={'width': '33%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '50px'}),
-        # html.Div(id='roc-plot-info'),
-
-        html.Div([
-            dcc.Loading(
-                id="loading",
-                type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
-                fullscreen=False,  # This will show the loading spinner across the entire page
-                children=[
-                    dcc.Graph(id='utility-plot', style={'height': '100%'}),
-            ]),
-            html.Div(
-                style={
-                    "display": "flex",  # Flexbox layout to stack elements horizontally
-                    "alignItems": "center",  # Vertically center the items
-                    "height": "8%"
-                },
-                children=[
-                    html.Div(style = {'width': '80%'}),
-                    # The question mark
-                    create_info_mark(tooltip_id="utility", tooltip_text=tooltip_data['utility']['tooltip_text'],
-                                    link_text = tooltip_data['utility']['link_text'],
-                                    link_url=tooltip_data['utility']['link_url'], 
-                                    top = "-105px", left = "0%", width = "200px"),
-                ]
-            )
-            
-        ], style={'width': '37%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '45px'}),
-
+                            # The question mark
+                            # create_roc_info_mark()
+                            create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'],
+                                            link_text = tooltip_data['roc']['link_text'],
+                                            link_url=tooltip_data['roc']['link_url'], 
+                                            top = "-215px", left = "50%", width = "200px"),
+                        ]
+                    )
+                    
+                ], style={'height': '100%', 'width': '50%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '0px'}),
+                # html.Div(id='roc-plot-info'),
+                html.Div([
+                    dcc.Loading(
+                        id="loading",
+                        type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
+                        fullscreen=False,  # This will show the loading spinner across the entire page
+                        children=[
+                            dcc.Graph(id='utility-plot', style={'height': '47vh', "width": "35vw"}),
+                    ]),
+                    html.Div(
+                        style={
+                            "display": "flex",  # Flexbox layout to stack elements horizontally
+                            "alignItems": "center",  # Vertically center the items
+                            "height": "5%",
+                            'paddingTop': '1.75%'
+                        },
+                        children=[
+                            html.Div(style = {'width': '80%'}),
+                            # The question mark
+                            create_info_mark(tooltip_id="utility", tooltip_text=tooltip_data['utility']['tooltip_text'],
+                                            link_text = tooltip_data['utility']['link_text'],
+                                            link_url=tooltip_data['utility']['link_url'], 
+                                            top = "-105px", left = "0%", width = "200px"),
+                        ]
+                    )
+                    
+                ], style={'width': '50%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '0px'}),
+            ], style={'width': '100%', 'height': '50%', 'display': 'flex', 'flexDirection': 'row'})
+                
+        ], style={'width': '70%', 'display': 'flex', 'flexDirection': 'column'}),
         # dcc.Graph(id='utility-plot', style={'width': '37%'}),
-        
-    ], style={'display': 'flex', 'width': '100%', "paddingLeft": "10px"}),
+        # create_footer(),
+    ], style={'height': '100vh', 'display': 'flex', 'width': '100%', 'flexDirection': 'row'}),
     
-    html.Div([
-        dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1)
-    ]),
+    
+    dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
+    html.Div(style = {'height': '20px'}),
     dcc.Store(id='imported-data'),
     dcc.Store(id='min-threshold-store'),
     dcc.Store(id='max-threshold-store'),
@@ -230,12 +255,12 @@ layout = html.Div([
     dcc.Store(id='roc-store'),
     dcc.Store(id='shape-store', data=[]),
     # dcc.Store(id='drawing-mode', data=False)
-    create_footer(), 
+    create_footer(),
     # dcc.ConfirmDialog(
     #             message='Welcome to the home dashboard! Graphics can take up to 20 seconds on initial load. Subsequent loading will be faster (~3-5 seconds). Thank you for your patience!',
     #             displayed=True,  # Initially hidden
     #         ),
-])
+], style={'overflow-x': 'hidden'})
 
 register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
 
@@ -252,18 +277,18 @@ def update_input_fields(data_type):
                     'To upload data, select "Import Data" from dropdown'
                 ]),
                 style={
-                    'width': '100%',
+                    'width': '99%',
                     'height': '60px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
                     'borderStyle': 'dashed',
                     'borderRadius': '5px',
                     'textAlign': 'center',
-                    'margin': '10px'
+                    'paddingRight': '0px'
                 },
             ),
             html.Div([
-                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5}),
+                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-mean-slider',
                     min=-3,
@@ -273,9 +298,9 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
@@ -285,9 +310,9 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5}),
+                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
@@ -297,9 +322,9 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
@@ -309,8 +334,8 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
-        ])
+            ], style={'width': '100%'}),
+        ], style={'marginTop': -10})
     elif data_type == "imported":
         return html.Div([
             dcc.ConfirmDialog(
@@ -324,30 +349,23 @@ def update_input_fields(data_type):
                     html.A('Select Files')
                 ]),
                 style={
-                    'width': '100%',
+                    'width': '99%',
                     'height': '60px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
                     'borderStyle': 'dashed',
                     'borderRadius': '5px',
                     'textAlign': 'center',
-                    'margin': '10px'
+                    'paddingRight': '0px'
                 },
                 multiple=False
             ),
-            
-            # ConfirmDialog for the popup
-            # dcc.ConfirmDialog(
-            #     id='upload-popup',
-            #     message='Data uploaded. Graphics loading...',
-            #     displayed=False,  # Initially hidden
-            # ),
             
             # Dynamic content area
             html.Div(id={'type': 'dynamic-output', 'index': 0}),
             dcc.Interval(id={'type': 'interval-component', 'index': 0}, interval=2000, n_intervals=0, disabled=True),
             html.Div([
-                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5}),
+                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-mean-slider',
                     min=-3,
@@ -357,9 +375,9 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
@@ -369,9 +387,9 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5}),
+                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
@@ -381,9 +399,9 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5}),
+                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
@@ -393,14 +411,14 @@ def update_input_fields(data_type):
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
                 )
-            ], style={'width': 550}),
+            ], style={'width': '100%'}),
             # html.Div(id={'type': 'dynamic-output', 'index': 0}),
 
 
             # dcc.Store(id='imported-data'),
             dcc.Store(id='min-threshold-store'),
             dcc.Store(id='max-threshold-store'),
-        ])
+        ], style={'marginTop': 10})
 
 def parse_contents(contents = "true_labels,predictions"):
     content_type, content_string = contents.split(',')
@@ -675,7 +693,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
     # if predictions or labels have changed, then proceed with calculations to update the data
     else:
-        
+
         # Bezier curve
         outer_idx = max_relative_slopes(fpr, tpr)[1]
         outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
