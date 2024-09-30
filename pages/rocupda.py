@@ -39,11 +39,7 @@ def hide_loading_overlay(n_clicks, n_intervals):
 layout = html.Div([
     create_loading_overlay(unique_id = 'roc-loading-overlay', loading_text=loadingText),
     create_app_bar(),
-    # dcc.Link('Go to Page 2', href='/page-2'),
     html.Div([
-        
-        # html.Div(dcc.Graph(id='distribution-plot'), style={'width': '70%', 'paddingTop': '50px'})
-        
         html.Div([
             html.Div([
                 dcc.Dropdown(
@@ -233,8 +229,7 @@ layout = html.Div([
             ], style={'width': '100%', 'height': '50%', 'display': 'flex', 'flexDirection': 'row'})
                 
         ], style={'width': '70%', 'display': 'flex', 'flexDirection': 'column'}),
-        # dcc.Graph(id='utility-plot', style={'width': '37%'}),
-        # create_footer(),
+
     ], style={'height': '100vh', 'display': 'flex', 'width': '100%', 'flexDirection': 'row'}),
     
     
@@ -256,10 +251,7 @@ layout = html.Div([
     dcc.Store(id='shape-store', data=[]),
     # dcc.Store(id='drawing-mode', data=False)
     create_footer(),
-    # dcc.ConfirmDialog(
-    #             message='Welcome to the home dashboard! Graphics can take up to 20 seconds on initial load. Subsequent loading will be faster (~3-5 seconds). Thank you for your patience!',
-    #             displayed=True,  # Initially hidden
-    #         ),
+
 ], style={'overflow-x': 'hidden'})
 
 register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
@@ -269,6 +261,7 @@ register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
     Input('data-type-dropdown', 'value'),
 )
 def update_input_fields(data_type):
+    # mode specific layout and components
     if data_type == 'simulated':
         return html.Div([
             html.H4(
@@ -420,6 +413,7 @@ def update_input_fields(data_type):
             dcc.Store(id='max-threshold-store'),
         ], style={'marginTop': 10})
 
+# parse uploaded csv file
 def parse_contents(contents = "true_labels,predictions"):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
@@ -450,6 +444,7 @@ def show_popup(contents):
     prevent_initial_call=True
 )
 def handle_uploaded_data(n_intervals, current_intervals):
+    # handles uploaded data and message.
     if n_intervals == 0:
         return (html.Div([
                     html.H5('Processing Data...'),
@@ -458,6 +453,8 @@ def handle_uploaded_data(n_intervals, current_intervals):
     elif n_intervals > 0:
         return html.Div(), True, 0
     return html.Div(), True, current_intervals
+
+
 
 @app.callback(
     Output('drawing-mode', 'data'),
@@ -504,7 +501,7 @@ def create_roc_plot(fpr, tpr, shapes=None):
 
     return roc_fig
 
-
+# global variables
 mode_status = 'simulated'
 previous_values = {
     'predictions': [0, 0, 0],
