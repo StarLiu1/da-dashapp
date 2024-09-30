@@ -693,7 +693,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
     # if predictions or labels have changed, then proceed with calculations to update the data
     else:
-
+        roc_plot_group = go.Figure()  
+        figure = roc_plot_group
+        figure.update_layout()
         # Bezier curve
         outer_idx = max_relative_slopes(fpr, tpr)[1]
         outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
@@ -1106,7 +1108,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             lines = [
                 shape for shape in roc_plot_group.layout.shapes 
                 if shape['type'] == 'line' and 
-                shape.get('name') not in ['ROC Curve', 'Bezier Curve', 'Optimal Cutoff Point']
+                shape['name'] not in ['ROC Curve', 'Bezier Curve', 'Optimal Cutoff Point']
             ]
 
         # Ensure that only one ROC curve and one Bezier curve are present
@@ -1151,28 +1153,28 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 marker=dict(color='red', size=10)
             ))
 
-    # Update the figure with the new shapes
-    # roc_fig.update_layout(shapes=shapes)
-    # roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
-    # roc_fig.add_trace(go.Scatter(x=np.round(previous_values['curve_fpr'], 3), y=np.round(previous_values['curve_tpr'], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
-    
-    # if we are in point mode, add the cutoff point
-    if 'Line' in button_text:
-        roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value, 3)], y=[np.round(tpr_value, 3)], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
-    # roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
+        # Update the figure with the new shapes
+        # roc_fig.update_layout(shapes=shapes)
+        # roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
+        # roc_fig.add_trace(go.Scatter(x=np.round(previous_values['curve_fpr'], 3), y=np.round(previous_values['curve_tpr'], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
+        
+        # if we are in point mode, add the cutoff point
+        if 'Line' in button_text:
+            roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value, 3)], y=[np.round(tpr_value, 3)], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
+        # roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
 
-    # add back in previous extracted lines for partial auc
-    if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
-        # Add the extracted lines to the new figure
-        roc_fig.update_layout(
-            shapes=lines  # Add the extracted lines
-        )
+        # add back in previous extracted lines for partial auc
+        if hasattr(roc_plot_group, 'layout') and roc_plot_group.layout is not None:
+            # Add the extracted lines to the new figure
+            roc_fig.update_layout(
+                shapes=lines  # Add the extracted lines
+            )
 
-    # Now extract any traces with 'fill' from roc_plot_group and add them to roc_fig
-    if hasattr(roc_plot_group, 'data') and roc_plot_group.data:
-        for trace in roc_plot_group.data:
-            if 'fill' in trace:  # Check if the trace has a 'fill' property
-                roc_fig.add_trace(trace)
+        # Now extract any traces with 'fill' from roc_plot_group and add them to roc_fig
+        if hasattr(roc_plot_group, 'data') and roc_plot_group.data:
+            for trace in roc_plot_group.data:
+                if 'fill' in trace:  # Check if the trace has a 'fill' property
+                    roc_fig.add_trace(trace)
 
     # update figure with configurations and texts
     roc_fig.update_layout(
