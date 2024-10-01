@@ -239,7 +239,7 @@ layout = html.Div([
     ], style={'height': '100vh', 'display': 'flex', 'width': '100%', 'flexDirection': 'row'}),
     
     
-    # dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
+    dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
     html.Div(style = {'height': '20px'}),
     dcc.Store(id='imported-data'),
     dcc.Store(id='min-threshold-store'),
