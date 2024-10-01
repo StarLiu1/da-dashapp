@@ -15,6 +15,11 @@ from components.footer import create_footer  # Import the footer
 from components.info_button import create_info_mark, register_info_tooltip_callbacks
 from components.loading_component import create_loading_overlay
 import json
+import plotly.io as pio
+import base64
+from weasyprint import HTML
+import io
+
 
 # Load the JSON file with tooltip information
 with open("assets/tooltips.json", "r") as f:
@@ -74,7 +79,7 @@ layout = html.Div([
                         step=0.01,
                         value=0.8,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='ufp-value', children='Utility of false positive (uFP): ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -86,7 +91,7 @@ layout = html.Div([
                         step=0.01,
                         value=0.6,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='utn-value', children='Utility of true negative (uTN): ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -98,7 +103,7 @@ layout = html.Div([
                         step=0.01,
                         value=1,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='ufn-value', children='Utility of false negative (uFN): ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -110,7 +115,7 @@ layout = html.Div([
                         step=0.01,
                         value=0,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='pd-value', children='Disease Prevalence: ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -122,12 +127,13 @@ layout = html.Div([
                         step=0.01,
                         value=0.5,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i: str(np.round(i,1)) for i in np.arange(0, 1, 0.1)},
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                         
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
-
+                html.Button("Generate Report", id="generate-report-button", n_clicks=0),
+                dcc.Download(id="download-report"),
             ], style={'displayModeBar': True})
         ], style={'height': '100%', 'width': '30%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
         html.Div([
@@ -233,7 +239,7 @@ layout = html.Div([
     ], style={'height': '100vh', 'display': 'flex', 'width': '100%', 'flexDirection': 'row'}),
     
     
-    dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
+    # dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
     html.Div(style = {'height': '20px'}),
     dcc.Store(id='imported-data'),
     dcc.Store(id='min-threshold-store'),
@@ -500,6 +506,51 @@ def create_roc_plot(fpr, tpr, shapes=None):
     )
 
     return roc_fig
+
+
+def create_pdf_report(fig):
+    # Convert figure to PNG image in memory (bytes object)
+    img_bytes = pio.to_image(fig, format='png')
+    
+    # Encode the image to base64 to embed in HTML
+    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+    
+    # Generate HTML content with the base64-encoded image embedded
+    html_content = f"""
+    <html>
+    <body>
+        <h1>Report Title</h1>
+        <p>Some text here...</p>
+        <img src="data:image/png;base64,{img_base64}" alt="Figure">
+    </body>
+    </html>
+    """
+    
+    # Convert the HTML to PDF in memory using a bytes buffer
+    pdf_io = io.BytesIO()
+    HTML(string=html_content).write_pdf(pdf_io)
+    pdf_io.seek(0)  # Move to the beginning of the BytesIO object
+    
+    return pdf_io
+
+@app.callback(
+    Output("download-report", "data"),
+    Input("generate-report-button", "n_clicks"),
+    Input("roc-store", "data"),  # Access the figure from the graph component
+    prevent_initial_call=True
+)
+def generate_report(n_clicks, figure):
+    # print(figure)
+
+    # Recreate the figure from the graph data
+    fig = create_roc_plot(figure['fpr'], figure['tpr'])
+    
+    # Generate the PDF report with the dynamic figure
+    pdf_io = create_pdf_report(fig)
+    
+    # Send the generated PDF as a downloadable file
+    return dcc.send_bytes(pdf_io.read(), "report.pdf")
+
 
 # global variables
 mode_status = 'simulated'

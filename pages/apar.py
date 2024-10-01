@@ -90,7 +90,7 @@ layout = html.Div([
                         step=0.01,
                         value=0.8,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='ufp-value-2', children='Utility of false positive (uFP): ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -102,7 +102,7 @@ layout = html.Div([
                         step=0.01,
                         value=0.6,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='utn-value-2', children='Utility of true negative (uTN): ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -114,7 +114,7 @@ layout = html.Div([
                         step=0.01,
                         value=1,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='ufn-value-2', children='Utility of false negative (uFN): ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -126,7 +126,7 @@ layout = html.Div([
                         step=0.01,
                         value=0,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i/10: f'{i/10:.1f}' for i in range(11)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='pd-value-2', children='Disease Prevalence: ', style={'marginTop': 5, 'marginBottom': 5}),
@@ -138,7 +138,7 @@ layout = html.Div([
                         step=0.01,
                         value=0.5,
                         tooltip={"placement": "right", "always_visible": False},
-                        marks={i: str(np.round(i,1)) for i in np.arange(0, 1, 0.1)}
+                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='optimalcutoff-value-2', style={'marginTop': 5, 'marginBottom': 5}),
