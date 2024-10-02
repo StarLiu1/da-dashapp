@@ -293,7 +293,7 @@ def update_input_fields(data_type):
                     id='disease-mean-slider',
                     min=-3,
                     max=3,
-                    step=0.1,
+                    step=0.01,
                     value=1,
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
@@ -305,7 +305,7 @@ def update_input_fields(data_type):
                     id='disease-std-slider',
                     min=0.1,
                     max=3,
-                    step=0.1,
+                    step=0.01,
                     value=1,
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
@@ -317,7 +317,7 @@ def update_input_fields(data_type):
                     id='healthy-mean-slider',
                     min=-3,
                     max=3,
-                    step=0.1,
+                    step=0.01,
                     value=0,
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(-3, 4)}
@@ -329,7 +329,7 @@ def update_input_fields(data_type):
                     id='healthy-std-slider',
                     min=0.1,
                     max=3,
-                    step=0.1,
+                    step=0.01,
                     value=1,
                     tooltip={"placement": "right", "always_visible": False},
                     marks={i: str(i) for i in range(0, 4)}
