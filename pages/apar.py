@@ -66,10 +66,11 @@ layout = html.Div([
                     ],
                     value='simulated'
                 ),
-                html.Div(id='input-fields-2', style={'width': '100%'}),
+                
             ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '55px'}),
             html.Div([
-                html.H4(id='cutoff-value-2', children='Raw Cutoff: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.Div(id='input-fields-2', style={'width': '100%'}),
+                html.H4(id='cutoff-value-2', children='Raw Cutoff: ', style={'marginTop': 0, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='cutoff-slider-2',
@@ -141,9 +142,9 @@ layout = html.Div([
                         marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
                 ], style={'width': '100%'}),
-                html.H4(id='optimalcutoff-value-2', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='optimalcutoff-value-2', style={'marginTop': 5}),
 
-            ], style={'displayModeBar': True})
+            ], style={'paddingLeft': '10px'})
         ], style={'width': '30%', 'display': 'flex', 'flexDirection': 'column'}),
         
         html.Div([
@@ -257,8 +258,8 @@ def update_input_fields_2(data_type):
                     'To upload data, select "Import Data" from dropdown'
                 ]),
                 style={
-                    'width': '99%',
-                    'height': '60px',
+                    'width': '98.5%',
+                    'height': '58px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
                     'borderStyle': 'dashed',
@@ -280,7 +281,7 @@ def update_input_fields_2(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider-2',
                     min=0.1,
@@ -292,7 +293,7 @@ def update_input_fields_2(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider-2',
                     min=-3,
@@ -304,7 +305,7 @@ def update_input_fields_2(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider-2',
                     min=0.1,
@@ -329,14 +330,14 @@ def update_input_fields_2(data_type):
                     html.A('Select Files')
                 ]),
                 style={
-                    'width': '99%',
-                    'height': '60px',
+                    'width': '98.5%',
+                    'height': '62px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
                     'borderStyle': 'dashed',
                     'borderRadius': '5px',
                     'textAlign': 'center',
-                    'margin': '10px'
+                    'marginRight': '0px'
                 },
                 multiple=False
             ),
@@ -352,7 +353,7 @@ def update_input_fields_2(data_type):
             html.Div(id={'type': 'dynamic-output2', 'index': 2}),
             dcc.Interval(id={'type': 'interval-component2', 'index': 2}, interval=2000, n_intervals=0, disabled=True),
             html.Div([
-                html.H4(id='dm-value-2', children='Disease Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='dm-value-2', children='Disease Mean: ', style={'marginTop': 21, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-mean-slider-2',
                     min=-3,
@@ -364,7 +365,7 @@ def update_input_fields_2(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='dsd-value-2', children='Disease Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider-2',
                     min=0.1,
@@ -376,7 +377,7 @@ def update_input_fields_2(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hm-value-2', children='Healthy Mean: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider-2',
                     min=-3,
@@ -388,7 +389,7 @@ def update_input_fields_2(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hsd-value-2', children='Healthy Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider-2',
                     min=0.1,

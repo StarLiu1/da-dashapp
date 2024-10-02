@@ -5,11 +5,8 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import roc_curve, roc_auc_score
 import plotly.graph_objects as go
-import base64
-import io
 from components.ClinicalUtilityProfiling import *
 from scipy.stats import norm
-from app import app
 from components.app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
 from components.footer import create_footer  # Import the footer
 from components.info_button import create_info_mark, register_info_tooltip_callbacks
@@ -19,6 +16,9 @@ import plotly.io as pio
 import base64
 from weasyprint import HTML
 import io
+from components.report import create_pdf_report, create_roc_plot
+
+from app import app
 
 
 # Load the JSON file with tooltip information
@@ -55,10 +55,11 @@ layout = html.Div([
                     ],
                     value='simulated'
                 ),
-                html.Div(id='input-fields', style={'width': '100%', 'padding': 0}),
+                
             ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '60px'}),
             html.Div([
-                html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.Div(id='input-fields', style={'width': '100%', 'padding': 0}),
+                html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 0, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
                         id='cutoff-slider',
@@ -134,7 +135,7 @@ layout = html.Div([
                 html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
                 html.Button("Generate Report", id="generate-report-button", n_clicks=0),
                 dcc.Download(id="download-report"),
-            ], style={'displayModeBar': True})
+            ], style={'paddingLeft': '10px'})
         ], style={'height': '100%', 'width': '30%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
         html.Div([
             html.Div([
@@ -239,7 +240,7 @@ layout = html.Div([
     ], style={'height': '100vh', 'display': 'flex', 'width': '100%', 'flexDirection': 'row'}),
     
     
-    dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
+    # dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
     html.Div(style = {'height': '20px'}),
     dcc.Store(id='imported-data'),
     dcc.Store(id='min-threshold-store'),
@@ -276,8 +277,8 @@ def update_input_fields(data_type):
                     'To upload data, select "Import Data" from dropdown'
                 ]),
                 style={
-                    'width': '99%',
-                    'height': '60px',
+                    'width': '98.5%',
+                    'height': '58px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
                     'borderStyle': 'dashed',
@@ -299,7 +300,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
@@ -311,7 +312,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
@@ -323,7 +324,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
@@ -349,7 +350,7 @@ def update_input_fields(data_type):
                 ]),
                 style={
                     'width': '99%',
-                    'height': '60px',
+                    'height': '62px',
                     'lineHeight': '60px',
                     'borderWidth': '1px',
                     'borderStyle': 'dashed',
@@ -364,7 +365,7 @@ def update_input_fields(data_type):
             html.Div(id={'type': 'dynamic-output', 'index': 0}),
             dcc.Interval(id={'type': 'interval-component', 'index': 0}, interval=2000, n_intervals=0, disabled=True),
             html.Div([
-                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='dm-value', children='Disease Mean: ', style={'marginTop': 21, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-mean-slider',
                     min=-3,
@@ -376,7 +377,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='dsd-value', children='Disease Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='disease-std-slider',
                     min=0.1,
@@ -388,7 +389,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hm-value', children='Healthy Mean: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-mean-slider',
                     min=-3,
@@ -400,7 +401,7 @@ def update_input_fields(data_type):
                 )
             ], style={'width': '100%'}),
             html.Div([
-                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 5, 'marginBottom': 5}),
+                html.H4(id='hsd-value', children='Healthy Standard Deviation: ', style={'marginTop': 0, 'marginBottom': 5}),
                 dcc.Slider(
                     id='healthy-std-slider',
                     min=0.1,
@@ -474,82 +475,29 @@ def toggle_drawing_mode(n_clicks, current_mode):
     else:
         return not current_mode
 
-
-def create_roc_plot(fpr, tpr, shapes=None):
-    """
-    Creates a ROC plot with the given FPR and TPR values.
-
-    Parameters:
-        fpr (array-like): False Positive Rates.
-        tpr (array-like): True Positive Rates.
-        shapes (list): List of shapes (like lines) to add to the plot.
-
-    Returns:
-        go.Figure: The ROC plot as a Plotly figure.
-    """
-    roc_fig = go.Figure()
-
-    roc_fig.add_trace(go.Scatter(
-        x=fpr,
-        y=tpr,
-        mode='lines',
-        name='ROC Curve',
-        line=dict(color='blue')
-    ))
-
-    roc_fig.update_layout(
-        title='ROC Curve',
-        xaxis_title='False Positive Rate',
-        yaxis_title='True Positive Rate',
-        template='plotly_white',
-        shapes=shapes if shapes else [],  # Add shapes if provided
-    )
-
-    return roc_fig
-
-
-def create_pdf_report(fig):
-    # Convert figure to PNG image in memory (bytes object)
-    img_bytes = pio.to_image(fig, format='png')
-    
-    # Encode the image to base64 to embed in HTML
-    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
-    
-    # Generate HTML content with the base64-encoded image embedded
-    html_content = f"""
-    <html>
-    <body>
-        <h1>Report Title</h1>
-        <p>Some text here...</p>
-        <img src="data:image/png;base64,{img_base64}" alt="Figure">
-    </body>
-    </html>
-    """
-    
-    # Convert the HTML to PDF in memory using a bytes buffer
-    pdf_io = io.BytesIO()
-    HTML(string=html_content).write_pdf(pdf_io)
-    pdf_io.seek(0)  # Move to the beginning of the BytesIO object
-    
-    return pdf_io
-
 @app.callback(
-    Output("download-report", "data"),
-    Input("generate-report-button", "n_clicks"),
-    Input("roc-store", "data"),  # Access the figure from the graph component
+    [Output("download-report", "data"),
+     Output("generate-report-button", "n_clicks")],
+    [Input("generate-report-button", "n_clicks"),
+     Input("roc-store", "data")],  # Access the figure from the graph component (roc-store)
     prevent_initial_call=True
 )
 def generate_report(n_clicks, figure):
-    # print(figure)
+    # Check if the button has been clicked and the ROC plot data is present
+    if n_clicks and figure:
+        # Recreate the figure from the stored data (e.g., FPR and TPR)
+        fig = create_roc_plot(figure['fpr'], figure['tpr'])
+        
+        # Generate the PDF report with the dynamic figure
+        pdf_io = create_pdf_report(fig)
+        
+        # Send the generated PDF as a downloadable file and reset the click counter
+        return dcc.send_bytes(pdf_io.read(), "report.pdf"), 0
+    
+    # If conditions are not met (no click or no figure), return None and don't reset clicks
+    return None, n_clicks
 
-    # Recreate the figure from the graph data
-    fig = create_roc_plot(figure['fpr'], figure['tpr'])
-    
-    # Generate the PDF report with the dynamic figure
-    pdf_io = create_pdf_report(fig)
-    
-    # Send the generated PDF as a downloadable file
-    return dcc.send_bytes(pdf_io.read(), "report.pdf")
+        
 
 
 # global variables
@@ -578,7 +526,7 @@ imported = False
     Output('optimalcutoff-value', 'children'), 
     Output('utility-plot', 'figure'),
     Output('distribution-plot', 'figure'),
-    Output('initial-interval', 'disabled', allow_duplicate=True),
+    # Output('initial-interval', 'disabled', allow_duplicate=True),
     Output('dm-value', 'children'), 
     Output('dsd-value', 'children'), 
     Output('hm-value', 'children'), 
@@ -605,7 +553,7 @@ imported = False
     Input('disease-std-slider', 'value'), 
     Input('healthy-mean-slider', 'value'), 
     Input('healthy-std-slider', 'value'),
-    Input('initial-interval', 'n_intervals'),
+    # Input('initial-interval', 'n_intervals'),
     Input('toggle-draw-mode', 'n_clicks'),  # New input for button clicks
     
     [State('roc-plot', 'figure'),
@@ -615,7 +563,7 @@ imported = False
      State('shape-store', 'data'),
     prevent_initial_call='initial_duplicate'
 )
-def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, initial_intervals, n_clicks, figure, roc_store, button_text, current_mode, shape_store):
+def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, n_clicks, figure, roc_store, button_text, current_mode, shape_store):
     global previous_values
     global imported
     global roc_plot_group
@@ -654,13 +602,13 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         draw_mode = 'point'
         button_text = 'Switch to Line Mode (select region for partial AUC)'
 
-    if trigger_id == 'initial-interval':
-        if initial_intervals == 0:
-            slider_cutoff = 0.51
-        elif initial_intervals == 1:
-            slider_cutoff = 0.5
-        draw_mode = 'point'
-        button_text = 'Switch to Line Mode (select region for partial AUC)'
+    # if trigger_id == 'initial-interval':
+    #     if initial_intervals == 0:
+    #         slider_cutoff = 0.51
+    #     elif initial_intervals == 1:
+    #         slider_cutoff = 0.5
+    #     draw_mode = 'point'
+    #     button_text = 'Switch to Line Mode (select region for partial AUC)'
 
         
     # based on mode
@@ -1145,7 +1093,12 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
     # Extract the lines from the saved figure, if the model has changed
     if trigger_id in ['{"index":0,"type":"upload-data"}', 'disease-mean-slider', 'disease-std-slider', 'healthy-mean-slider', 'healthy-std-slider', 'imported-interval']:
+        curve_points = np.array(curve_points)
         roc_fig.add_trace(go.Scatter(x=np.round(fpr, 3), y=np.round(tpr, 3), mode='lines', name='ROC Curve', line=dict(color='blue')))
+        # if we are in point mode, add the cutoff point
+        if 'Line' in button_text:
+            roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value, 3)], y=[np.round(tpr_value, 3)], mode='markers', name='Cutoff Point', marker=dict(color='blue', size=10)))
+        
         roc_fig.add_trace(go.Scatter(x=np.round(curve_points[:,0], 3), y=np.round(curve_points[:,1], 3), mode='lines', name='Bezier Curve', line=dict(color='blue')))
         roc_fig.add_trace(go.Scatter(x=[np.round(fpr_value_optimal_pt, 3)], y=[np.round(tpr_value_optimal_pt, 3)], mode='markers', name='Optimal Cutoff Point', marker=dict(color='red', size=10)))
 
@@ -1500,14 +1453,14 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     }
 
     # print(modelTest_json)
-    initial_interval_disabled = initial_intervals >= 1
+    # initial_interval_disabled = initial_intervals >= 1
 
     # set default
     if current_mode == 'imported' and slider_cutoff >= 1:
         slider_cutoff = 0.5
 
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
-             utility_fig, distribution_fig, initial_interval_disabled,
+             utility_fig, distribution_fig,# initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
                  utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, button_text, shapes)
 
