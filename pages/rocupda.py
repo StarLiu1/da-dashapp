@@ -256,6 +256,12 @@ layout = html.Div([
     dcc.Store(id='hsd-value'),
     dcc.Store(id='roc-store'),
     dcc.Store(id='shape-store', data=[]),
+
+    dcc.Store(id='roc-plot-store'),
+    dcc.Store(id='utility-plot-store'),
+    dcc.Store(id='distribution-plot-store'),
+    dcc.Store(id='parameters-store'),
+
     # dcc.Store(id='drawing-mode', data=False)
     create_footer(),
 
@@ -479,17 +485,27 @@ def toggle_drawing_mode(n_clicks, current_mode):
     [Output("download-report", "data"),
      Output("generate-report-button", "n_clicks")],
     [Input("generate-report-button", "n_clicks"),
-     Input("roc-store", "data")],  # Access the figure from the graph component (roc-store)
+    #  Input("roc-store", "data"),
+     Input('roc-plot-store', 'data'),
+     Input('utility-plot-store', 'data'),
+     Input('distribution-plot-store', 'data'),
+     Input('parameters-store', 'data'),
+     ],  # Access the figure from the graph component (roc-store)
     prevent_initial_call=True
 )
-def generate_report(n_clicks, figure):
+def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_dict):
+        
+
     # Check if the button has been clicked and the ROC plot data is present
-    if n_clicks and figure:
+    if n_clicks and roc_dict:
         # Recreate the figure from the stored data (e.g., FPR and TPR)
-        fig = create_roc_plot(figure['fpr'], figure['tpr'])
+        # fig = create_roc_plot(figure['fpr'], figure['tpr'])
+        roc_fig = go.Figure(roc_dict)
+        utility_fig = go.Figure(utility_dict)
+        binormal_fig = go.Figure(binormal_dict)
         
         # Generate the PDF report with the dynamic figure
-        pdf_io = create_pdf_report(fig)
+        pdf_io = create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict)
         
         # Send the generated PDF as a downloadable file and reset the click counter
         return dcc.send_bytes(pdf_io.read(), "report.pdf"), 0
@@ -536,10 +552,17 @@ imported = False
     Output('utn-value', 'children'), 
     Output('ufn-value', 'children'), 
     Output('pd-value', 'children'), 
+    #for replotting on the dashboard
     Output('roc-store', 'data'),
     # Output('roc-plot-info', 'children'),
     Output('toggle-draw-mode', 'children'),  # New output to update button text
     Output('shape-store', 'data'),
+    #for generating figures in the pdf
+    Output('roc-plot-store', 'data'),
+    Output('utility-plot-store', 'data'),
+    Output('distribution-plot-store', 'data'),
+    Output('parameters-store', 'data'),
+
     Input('cutoff-slider', 'value'), 
     Input('roc-plot', 'clickData'), 
     Input('uTP-slider', 'value'), 
@@ -1451,18 +1474,35 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         'fpr': fpr.tolist(),  # Convert to list to ensure JSON serializability
         'tpr': tpr.tolist()
     }
+    # print(roc_fig.to_dict())
+    roc_dict = roc_fig.to_dict()
+    utility_dict = utility_fig.to_dict()
+    binormal_dict = distribution_fig.to_dict()
 
-    # print(modelTest_json)
-    # initial_interval_disabled = initial_intervals >= 1
+    parameter_dict = {
+        'slider_cutoff': slider_cutoff,
+        'uTP': uTP,
+        'uFP': uFP,
+        'uTN': uTN,
+        'uFN': uFN,
+        'pD': pD,
+        'disease_mean': disease_mean,
+        'disease_std': disease_std,
+        'healthy_mean': healthy_mean,
+        'healthy_std': healthy_std
+    }
 
     # set default
     if current_mode == 'imported' and slider_cutoff >= 1:
         slider_cutoff = 0.5
 
+    
+
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
              utility_fig, distribution_fig,# initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
-                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, button_text, shapes)
+                 utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, button_text, shapes,
+                 roc_dict, utility_dict, binormal_dict, parameter_dict)
 
 
 @app.callback(
