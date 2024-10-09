@@ -915,7 +915,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
                 starttime = time.time()
                 pLs, pStars, pUs = modelPriorsOverRoc(modelTest, uTN, uTP, uFN, uFP, 0, HoverB)
                 firstCheckPoint = time.time()
-                print(f'first* checkpoint: {firstCheckPoint - starttime}')
+                # print(f'first* checkpoint: {firstCheckPoint - starttime}')
                 thresholds = np.array(modelTest['thresholds'])
                 thresholds = np.array(thresholds)
                 if data_type == 'imported':
@@ -925,7 +925,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
                 
                 thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
                 secondCheckPoint = time.time()
-                print(f'second* checkpoint: {secondCheckPoint - firstCheckPoint}')
+                # print(f'second* checkpoint: {secondCheckPoint - firstCheckPoint}')
                 area = 0
                 # #calculate applicability area
                 # for i, prior in enumerate(pLs):

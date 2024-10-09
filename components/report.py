@@ -5,7 +5,7 @@ import io
 import plotly.graph_objects as go
 
 
-def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict):
+def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_fig = None):
     slider_cutoff = parameters_dict['slider_cutoff']
     uTP = parameters_dict['uTP']
     uFP = parameters_dict['uFP']
@@ -21,10 +21,16 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict):
     utility_img_bytes = pio.to_image(utility_fig, format='png')
     binormal_img_bytes = pio.to_image(binormal_fig, format='png')
     
+    
     # Encode the image to base64 to embed in HTML
     roc_img_base64 = base64.b64encode(roc_img_bytes).decode('utf-8')
     utility_img_base64 = base64.b64encode(utility_img_bytes).decode('utf-8')
     binormal_img_base64 = base64.b64encode(binormal_img_bytes).decode('utf-8')
+    
+    apar_img_base64 = ""
+    if apar_fig is not None:
+        apar_img_bytes = pio.to_image(apar_fig, format='png')
+        apar_img_base64 = base64.b64encode(apar_img_bytes).decode('utf-8')
     
     # Generate HTML content with the base64-encoded image embedded
     html_content = f"""
@@ -89,6 +95,7 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict):
         <p>Some text here...</p>
         <img src="data:image/png;base64,{utility_img_base64}" alt="Figure">
         <p>Some text here...</p>
+        {"<img src='data:image/png;base64," + apar_img_base64 + "' alt='Additional Figure'><p>Additional interpretation...</p>" if apar_img_base64 else ""}
         
     </body>
     </html>

@@ -207,22 +207,27 @@ def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB, num_workers=4
 
     # Define chunk size based on num_workers
     chunk_size = len(tprArray) // num_workers
-    futures = []
+    results = []
 
-    # Parallel processing
+    # Parallel processing with indices to preserve order
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-        for i in range(num_workers):
-            start_idx = i * chunk_size
-            end_idx = (i + 1) * chunk_size if i < num_workers - 1 else len(tprArray)
-            tpr_chunk = tprArray[start_idx:end_idx]
-            fpr_chunk = fprArray[start_idx:end_idx]
-            futures.append(executor.submit(process_roc_chunk, tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u))
+        futures = {
+            executor.submit(process_roc_chunk, tprArray[i*chunk_size:(i+1)*chunk_size if i < num_workers - 1 else len(tprArray)], 
+                            fprArray[i*chunk_size:(i+1)*chunk_size if i < num_workers - 1 else len(fprArray)], 
+                            uTN, uTP, uFN, uFP, u): i for i in range(num_workers)
+        }
 
         for future in concurrent.futures.as_completed(futures):
+            chunk_index = futures[future]  # Retrieve chunk index
             chunk_pLs, chunk_pStars, chunk_pUs = future.result()
-            pLs.extend(chunk_pLs)
-            pStars.extend(chunk_pStars)
-            pUs.extend(chunk_pUs)
+            results.append((chunk_index, chunk_pLs, chunk_pStars, chunk_pUs))
+
+    # Sort results by chunk index to preserve order
+    results.sort(key=lambda x: x[0])
+    for _, chunk_pLs, chunk_pStars, chunk_pUs in results:
+        pLs.extend(chunk_pLs)
+        pStars.extend(chunk_pStars)
+        pUs.extend(chunk_pUs)
 
     return [pLs, pStars, pUs]
     

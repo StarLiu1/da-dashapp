@@ -515,38 +515,6 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
     # If conditions are not met (no click or no figure), return None and don't reset clicks
     return None, n_clicks
 
-@app.callback(
-    [Output("download-report-wapar", "data"),
-     Output("generate-apar-report-button", "n_clicks")],
-    [Input("generate-apar-report-button", "n_clicks"),
-    #  Input("roc-store", "data"),
-     Input('roc-plot-store', 'data'),
-     Input('utility-plot-store', 'data'),
-     Input('distribution-plot-store', 'data'),
-     Input('parameters-store', 'data'),
-     ],  # Access the figure from the graph component (roc-store)
-    prevent_initial_call=True
-)
-def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_dict):
-        
-
-    # Check if the button has been clicked and the ROC plot data is present
-    if n_clicks and roc_dict:
-        # Recreate the figure from the stored data (e.g., FPR and TPR)
-        # fig = create_roc_plot(figure['fpr'], figure['tpr'])
-        roc_fig = go.Figure(roc_dict)
-        utility_fig = go.Figure(utility_dict)
-        binormal_fig = go.Figure(binormal_dict)
-        
-        # Generate the PDF report with the dynamic figure
-        pdf_io = create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict)
-        
-        # Send the generated PDF as a downloadable file and reset the click counter
-        return dcc.send_bytes(pdf_io.read(), "report.pdf"), 0
-    
-    # If conditions are not met (no click or no figure), return None and don't reset clicks
-    return None, n_clicks
-
         
 
 
@@ -596,6 +564,7 @@ imported = False
     Output('utility-plot-store', 'data'),
     Output('distribution-plot-store', 'data'),
     Output('parameters-store', 'data'),
+    # Output('model-store', 'data'),
 
     Input('cutoff-slider', 'value'), 
     Input('roc-plot', 'clickData'), 
@@ -641,7 +610,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     # clear or extract shapes
     shapes = shape_store if shape_store else []
 
-    print(trigger_id)
+    # print(trigger_id)
     info_text = ''
     if not ctx.triggered:
         slider_cutoff = 0.5
@@ -1568,4 +1537,190 @@ def update_thresholds(data_type, uploaded_data, imported_data):
             max_threshold = np.max(predictions)
             return min_threshold, max_threshold, {i: f'{i:.1f}' for i in np.linspace(min_threshold, max_threshold, 11)}
         return 0, 1, {i: f'{i:.1f}' for i in range(-5, 6)}
+
+
+
+@app.callback(
+    [Output("download-report-wapar", "data"),
+     Output("generate-apar-report-button", "n_clicks")],
+    [Input("generate-apar-report-button", "n_clicks"),
+    #  Input("roc-store", "data"),
+     Input('roc-plot-store', 'data'),
+     Input('utility-plot-store', 'data'),
+     Input('distribution-plot-store', 'data'),
+     Input('parameters-store', 'data'),
+     Input('uTP-slider', 'value'), 
+     Input('uFP-slider', 'value'), 
+     Input('uTN-slider', 'value'), 
+     Input('uFN-slider', 'value'), 
+    #  Input('pD-slider', 'value'), 
+     Input('cutoff-slider', 'value'), 
+     Input({'type': 'upload-data', 'index': ALL}, 'contents'), 
+     ],  # Access the figure from the graph component (roc-store)
+    prevent_initial_call=True
+)
+def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_dict, uTP, uFP, uTN, uFN, slider_cutoff, data_type):
+        
+
+    # Check if the button has been clicked and the ROC plot data is present
+    if n_clicks and roc_dict:
+        H = uTN - uFP
+        B = uTP - uFN + 0.000000001
+        HoverB = H/B
+        # slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+
+        # curve_points = list(zip(previous_values['curve_fpr'], previous_values['curve_tpr']))
+        
+        # #bezier optimal point
+        # cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
+
+        # closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
+        # original_tpr, original_fpr, index = find_closest_pair_separate(previous_values['tpr'], previous_values['fpr'], closest_tpr, closest_fpr)
+        # closest_prob_cutoff = thresholds[index]
+
+        # # tpr_value_optimal_pt = original_tpr
+        # # fpr_value_optimal_pt = original_fpr
+        # cutoff_optimal_pt = closest_prob_cutoff
+        # # print(f'optimal point cutoff:{cutoff_optimal_pt}')
+        # predictions = np.array(predictions)
+
+        # # tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
+        # # fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
+        # cutoff = slider_cutoff
+
+        # print(f'h is {H}; b is {B}')
+        # slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+        curve_fpr = previous_values['curve_fpr']
+        curve_tpr = previous_values['curve_tpr']
+
+        # Create a DataFrame called modelTest with these two columns
+        modelTest = pd.DataFrame({
+            'fpr': previous_values['fpr'],
+            'tpr': previous_values['tpr']
+        })
+        # HoverB = 0.5
+        starttime = time.time()
+        pLs, pStars, pUs = modelPriorsOverRoc(modelTest, uTN, uTP, uFN, uFP, 0, HoverB)
+        firstCheckPoint = time.time()
+        # print(f'first* checkpoint: {firstCheckPoint - starttime}')
+        thresholds = np.array(previous_values['thresholds'])
+        thresholds = np.array(thresholds)
+        if data_type == 'imported':
+            thresholds = np.where(thresholds > 1, 1, thresholds)
+        # print(len(pLs))
+        # print(len(thresholds))
+        
+        thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+        secondCheckPoint = time.time()
+        # print(f'second* checkpoint: {secondCheckPoint - firstCheckPoint}')
+        area = 0
+
+        ########################################################concurrent processing
+        num_workers = 4
+        chunk_size = len(pLs) // num_workers
+        results = []
+        ## takes 2.3 seconds
+        with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+            futures = []
+            largestRangePrior = 0
+            for i in range(num_workers):
+                start = i * chunk_size
+                end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
+                futures.append(executor.submit(calculate_area_chunk, start, end, pLs, pUs, thresholds))
+            
+            for future in concurrent.futures.as_completed(futures):
+                chunk_area, chunk_largest_range, chunk_largest_index = future.result()
+                area += chunk_area
+                if chunk_largest_range > largestRangePrior:
+                    largestRangePrior = chunk_largest_range
+                    largestRangePriorThresholdIndex = chunk_largest_index
+        
+        area = min(np.round(float(area), 3), 1)  # Round and cap area at 1
+
+        # Create the figure
+        apar_fig = go.Figure()
+
+        apar_fig.add_trace(go.Scatter(
+            x=thresholds,
+            y=pUs,
+            mode='lines',
+            name='pUs',
+            line=dict(color='blue')
+        ))
+
+        apar_fig.add_trace(go.Scatter(
+            x=thresholds,
+            y=pLs,
+            mode='lines',
+            name='pLs',
+            line=dict(color='orange')
+        ))
+        
+        # Add a vertical line at cutoff
+        apar_fig.add_trace(go.Scatter(
+            x=[slider_cutoff, slider_cutoff],  # Same x value for both points to create a vertical line
+            y=[0, 1],  # Full height of the y-axis
+            mode='lines',
+            line=dict(color='green', width=2, dash='dash'),
+            name="Selected threshold"
+        ))
+
+        # Add annotations to label each line at the bottom of the graph
+        apar_fig.add_annotation(
+            x=slider_cutoff,
+            y=0,
+            xref="x",
+            yref="y",
+            text="Cutoff",
+            showarrow=False,
+            yshift=-10,
+            textangle=0
+        )
+
+        # print(area)
+        apar_fig.update_layout(
+            title={
+                'text': 'Applicable Area',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            xaxis_title='Probability Cutoff Threshold',
+            yaxis_title='Prior Probability (Prevalence)',
+            xaxis=dict(tickmode='array', tickvals=np.arange(round(min(thresholds), 1), min(round(max(thresholds), 1), 5), step=0.1)),
+            yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
+            template='plotly_white',
+            annotations=[
+            dict(
+                x=0.95,
+                y=0.05,
+                xref='paper',
+                yref='paper',
+                text = f'ApAr = {round(area, 3) if isinstance(area, (int, float)) else area}',
+                showarrow=False,
+                font=dict(
+                    size=12,
+                    color='black'
+                ),
+                align='right',
+                bgcolor='white',
+                bordercolor='black',
+                borderwidth=1
+            )]
+        )
+
+        
+        # Recreate the figure from the stored data (e.g., FPR and TPR)
+        # fig = create_roc_plot(figure['fpr'], figure['tpr'])
+        roc_fig = go.Figure(roc_dict)
+        utility_fig = go.Figure(utility_dict)
+        binormal_fig = go.Figure(binormal_dict)
+        
+        # Generate the PDF report with the dynamic figure
+        pdf_io = create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_fig)
+        
+        # Send the generated PDF as a downloadable file and reset the click counter
+        return dcc.send_bytes(pdf_io.read(), "report_with_apar.pdf"), 0
+    
+    # If conditions are not met (no click or no figure), return None and don't reset clicks
+    return None, n_clicks
 
