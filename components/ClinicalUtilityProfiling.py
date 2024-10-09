@@ -15,6 +15,8 @@ import tracemalloc
 from scipy.spatial.distance import cdist #for perpendicular distances
 from scipy.optimize import differential_evolution
 
+import concurrent.futures # for apar calculation
+
 def treatAll(x, uFP, uTP):
     """
     Expected value calculation for the option treat all
@@ -111,61 +113,118 @@ def pLpStarpUThresholds(sens, spec, uTN, uTP, uFN, uFP, u):
 
     return [pL, pStar, pU]
 
-def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB):
-    """
-    Collects all the lower, pStar, and upper thresholds for every point on the ROC curve
+# def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB):
+#     """
+#     Collects all the lower, pStar, and upper thresholds for every point on the ROC curve
     
-    Args: 
-        modelChosen (model): chosen ml model
-        uTN (float): utility of true negative
-        uTP (float): utility of true positive
-        uFN (float): utility of false negative
-        uFP (float): utility of false positive
-        u: utility of the test itself
+#     Args: 
+#         modelChosen (model): chosen ml model
+#         uTN (float): utility of true negative
+#         uTP (float): utility of true positive
+#         uFN (float): utility of false negative
+#         uFP (float): utility of false positive
+#         u: utility of the test itself
         
-    Returns: 
-        a list of lists of thresholds (pL, pStar, and pU): [[pL], [pStar], [pU]]
+#     Returns: 
+#         a list of lists of thresholds (pL, pStar, and pU): [[pL], [pStar], [pU]]
     
-    """
+#     """
+#     pLs = []
+#     pStars = []
+#     pUs = []
+    
+#     # uFP = uTN - (uTP - uFN) * HoverB
+
+#     # get TPRs and FPRs from the model
+#     if(type(np.array(modelChosen['tpr'])) == list):
+#         tprArray = np.array(np.array(modelChosen['tpr'])[0])
+#         fprArray = np.array(np.array(modelChosen['fpr'])[0])
+#     elif type(np.array(modelChosen['tpr'])[0]) == list:
+#         tprArray = np.array(np.array(modelChosen['tpr'])[0])
+#         fprArray = np.array(np.array(modelChosen['fpr'])[0])
+#     elif (np.array(modelChosen['tpr'])).size > 1:
+#         tprArray = np.array(modelChosen['tpr'])
+#         fprArray = np.array(modelChosen['fpr'])
+#     else:
+#         tprArray = np.array(modelChosen['tpr'])[0]
+#         fprArray = np.array(modelChosen['fpr'])[0]
+        
+#     #for each pair of tpr, fpr
+#     if(tprArray.size > 1):
+#         for cutoffIndex in range(0, tprArray.size):
+            
+#             #assign tpr and fpr
+#             tpr = tprArray[cutoffIndex]
+#             fpr = fprArray[cutoffIndex]
+            
+#             #find pL, pStar, and pU thresholds
+#             pL, pStar, pU = pLpStarpUThresholds(tpr, 1 - fpr, uTN, uTP, uFN, uFP, u)
+            
+#             #append results
+#             pLs.append(pL)
+#             pStars.append(pStar)
+#             pUs.append(pU)
+            
+#         return [pLs, pStars, pUs]
+#     else:
+#         return [[0], [0], [0]]
+
+# Helper function for processing a chunk of TPR/FPR arrays
+def process_roc_chunk(tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u):
     pLs = []
     pStars = []
     pUs = []
-    
-    # uFP = uTN - (uTP - uFN) * HoverB
+    for tpr, fpr in zip(tpr_chunk, fpr_chunk):
+        pL, pStar, pU = pLpStarpUThresholds(tpr, 1 - fpr, uTN, uTP, uFN, uFP, u)
+        pLs.append(pL)
+        pStars.append(pStar)
+        pUs.append(pU)
+    return pLs, pStars, pUs
 
-    # get TPRs and FPRs from the model
-    if(type(np.array(modelChosen['tpr'])) == list):
+# Parallelized main function
+def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB, num_workers=4):
+    pLs = []
+    pStars = []
+    pUs = []
+
+    # Extract tpr and fpr arrays from modelChosen
+    if type(np.array(modelChosen['tpr'])) == list:
         tprArray = np.array(np.array(modelChosen['tpr'])[0])
         fprArray = np.array(np.array(modelChosen['fpr'])[0])
     elif type(np.array(modelChosen['tpr'])[0]) == list:
         tprArray = np.array(np.array(modelChosen['tpr'])[0])
         fprArray = np.array(np.array(modelChosen['fpr'])[0])
-    elif (np.array(modelChosen['tpr'])).size > 1:
+    elif np.array(modelChosen['tpr']).size > 1:
         tprArray = np.array(modelChosen['tpr'])
         fprArray = np.array(modelChosen['fpr'])
     else:
         tprArray = np.array(modelChosen['tpr'])[0]
         fprArray = np.array(modelChosen['fpr'])[0]
-        
-    #for each pair of tpr, fpr
-    if(tprArray.size > 1):
-        for cutoffIndex in range(0, tprArray.size):
-            
-            #assign tpr and fpr
-            tpr = tprArray[cutoffIndex]
-            fpr = fprArray[cutoffIndex]
-            
-            #find pL, pStar, and pU thresholds
-            pL, pStar, pU = pLpStarpUThresholds(tpr, 1 - fpr, uTN, uTP, uFN, uFP, u)
-            
-            #append results
-            pLs.append(pL)
-            pStars.append(pStar)
-            pUs.append(pU)
-            
-        return [pLs, pStars, pUs]
-    else:
+
+    # Ensure arrays are not empty
+    if tprArray.size <= 1:
         return [[0], [0], [0]]
+
+    # Define chunk size based on num_workers
+    chunk_size = len(tprArray) // num_workers
+    futures = []
+
+    # Parallel processing
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+        for i in range(num_workers):
+            start_idx = i * chunk_size
+            end_idx = (i + 1) * chunk_size if i < num_workers - 1 else len(tprArray)
+            tpr_chunk = tprArray[start_idx:end_idx]
+            fpr_chunk = fprArray[start_idx:end_idx]
+            futures.append(executor.submit(process_roc_chunk, tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u))
+
+        for future in concurrent.futures.as_completed(futures):
+            chunk_pLs, chunk_pStars, chunk_pUs = future.result()
+            pLs.extend(chunk_pLs)
+            pStars.extend(chunk_pStars)
+            pUs.extend(chunk_pUs)
+
+    return [pLs, pStars, pUs]
     
 def priorFiller(priorList, lower: bool):
     """
@@ -298,38 +357,186 @@ def eqLine(x, x0, x1, y0, y1):
     y = slope * (x - x0) + y0
     return y
 
-def applicableArea(modelRow, thresholds, utils, p, HoverB):
-    """
-    Find the applicability area (ApAr) of the model. 
-    Interpretation of the result: ranges of prior probability in the target population for which the model has value (utility)
-    over the alternatives of treat all and treat none. ApAr is calculated by integrating the range of applicable prior over
-    the entired ROC. 
+# def applicableArea(modelRow, thresholds, utils, p, HoverB):
+#     """
+#     Find the applicability area (ApAr) of the model. 
+#     Interpretation of the result: ranges of prior probability in the target population for which the model has value (utility)
+#     over the alternatives of treat all and treat none. ApAr is calculated by integrating the range of applicable prior over
+#     the entired ROC. 
     
-    Args:
-        modelRow (row of a dataframe): a row of the dataframe with the model parameters and results:
-            - asymmetric cost
-            - TPRs
-            - FPRs
-            - predicted probability cutoff thresholds
-            - utilities
-                - uTN > uTP > uFP > uFN
-                - uFN should be 0 or has the least utility
-                - uTN should be 1 or has the highest utility
-                - uTP should have the second highest utility
-                - uFP should have the third highest utility
-        thresholds (list): list of thresholds used for classifying the predicted probabilities
-        utils (list): list of utility parameters
-            - utilities of true negative, true positive, false negative, false positive, and the uility of the test itself
-        p (float): the specific prior probability of interest. See if the specified prior fits in the range of applicable priors
+#     Args:
+#         modelRow (row of a dataframe): a row of the dataframe with the model parameters and results:
+#             - asymmetric cost
+#             - TPRs
+#             - FPRs
+#             - predicted probability cutoff thresholds
+#             - utilities
+#                 - uTN > uTP > uFP > uFN
+#                 - uFN should be 0 or has the least utility
+#                 - uTN should be 1 or has the highest utility
+#                 - uTP should have the second highest utility
+#                 - uFP should have the third highest utility
+#         thresholds (list): list of thresholds used for classifying the predicted probabilities
+#         utils (list): list of utility parameters
+#             - utilities of true negative, true positive, false negative, false positive, and the uility of the test itself
+#         p (float): the specific prior probability of interest. See if the specified prior fits in the range of applicable priors
         
-    Returns: 
-        a list of 5 results
-            area (float): the ApAr value
-            largestRangePriorThresholdIndex (int): index of the threshold that gives us the largest range of applicable priors
-            withinRange (bool): a boolean indicating if the specified prior of interest falls within the range of the model
-            leastViable (float): minimum applicable prior for the target population
-            uFP (float): returns the uFP 
-    """
+#     Returns: 
+#         a list of 5 results
+#             area (float): the ApAr value
+#             largestRangePriorThresholdIndex (int): index of the threshold that gives us the largest range of applicable priors
+#             withinRange (bool): a boolean indicating if the specified prior of interest falls within the range of the model
+#             leastViable (float): minimum applicable prior for the target population
+#             uFP (float): returns the uFP 
+#     """
+#     uTN, uTP, uFN, uFP, u = utils
+#     area = 0
+#     largestRangePrior = 0
+#     largestRangePriorThresholdIndex = -999
+#     withinRange = False
+#     priorDistributionArray = []
+#     leastViable = 1
+#     minPrior = 0
+#     maxPrior = 0
+#     meanPrior = 0
+    
+#     #calculate pLs, pStars, and pUs
+# #     uFP = uTN - (uTP - uFN) * (1 / modelRow['costRatio'])
+# #     HoverB = (1 / costRatio)
+#     # uFP = uTN - (uTP - uFN) * HoverB
+#     pLs, pStars, pUs = modelPriorsOverRoc(modelRow, uTN, uTP, uFN, uFP, u)
+    
+#     #modify the classification thresholds
+#     thresholds = np.array(thresholds)
+#     thresholds = np.where(thresholds > 1, 1, thresholds)
+#     thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+    
+#     #calculate applicability area
+#     for i, prior in enumerate(pLs):
+#         if i < len(pLs) - 1:
+#             if pLs[i] < pUs[i] and pLs[i + 1] < pUs[i + 1]:
+                
+#                 #find the range of priors
+#                 rangePrior = pUs[i] - pLs[i]
+                
+#                 #check if it is the largest range of priors
+#                 if rangePrior > largestRangePrior:
+#                     largestRangePrior = rangePrior
+#                     largestRangePriorThresholdIndex = i
+                    
+#                 # trapezoidal rule (upper + lower base)/2
+#                 avgRangePrior = (rangePrior + (pUs[i + 1] - pLs[i + 1])) / 2 
+                
+#                 #accumulate areas
+#                 area += abs(avgRangePrior) * abs(thresholds[i + 1] - thresholds[i])
+                
+#             #where pL and pU cross into pU > pL
+#             elif pLs[i] > pUs[i] and pLs[i + 1] < pUs[i + 1]:                
+#                 x0 = thresholds[i]
+#                 x1 = thresholds[i+1]
+#                 if x0 != x1:
+#                     pL0 = pLs[i]
+#                     pL1 = pLs[i+1]
+#                     pU0 = pUs[i]
+#                     pU1 = pUs[i+1]
+#                     x = sy.symbols('x')
+                    
+#                     #solve for x and y at the intersection
+#                     xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+#                     yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                    
+#                     # trapezoidal rule (upper + lower base)/2
+#                     avgRangePrior = (0 + (pUs[i + 1] - pLs[i + 1])) / 2
+                    
+#                     #accumulate areas
+#                     area += abs(avgRangePrior) * abs(thresholds[i + 1] - xIntersect[0])
+                
+#             elif (pLs[i] < pUs[i] and pLs[i + 1] > pUs[i + 1]):
+#                 x0 = thresholds[i]
+#                 x1 = thresholds[i+1]
+#                 if x0 != x1:
+#                     pL0 = pLs[i]
+#                     pL1 = pLs[i+1]
+#                     pU0 = pUs[i]
+#                     pU1 = pUs[i+1]
+#                     x = sy.symbols('x')
+                    
+#                     #solve for x and y at the intersection
+#                     xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                    
+#                     if len(xIntersect) == 0:
+#                         xIntersect = [0]
+                        
+#                     yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                    
+#                     #accumulate areas
+#                     avgRangePrior = (0 + (pUs[i] - pLs[i])) / 2 # trapezoidal rule (upper + lower base)/2
+#                     area += abs(avgRangePrior) * abs(xIntersect[0] - thresholds[i + 1])
+                
+#     #round the calculation
+#     area = np.round(float(area), 3)
+    
+#     #due to minor calculation inaccuracies in the previous iterations of the function. This should no longer apply. All ApAr 
+#     #should be less than 1
+#     if(area > 1):
+#         area = 1           
+#     #check if the specified prior is within the ranges of priors
+#     if((p > minPrior) & (p < maxPrior)):
+#         withinRange = True
+                
+#     return [area, largestRangePriorThresholdIndex, withinRange, leastViable, uFP]
+
+# Function to calculate area for a chunk
+def calculate_area_chunk(start, end, pLs, pUs, thresholds):
+    area = 0
+    largestRangePrior = 0
+    largestRangePriorThresholdIndex = -999
+    
+    for i in range(start, end):
+        if i < len(pLs) - 1:
+            if pLs[i] < pUs[i] and pLs[i + 1] < pUs[i + 1]:
+                rangePrior = pUs[i] - pLs[i]
+                if rangePrior > largestRangePrior:
+                    largestRangePrior = rangePrior
+                    largestRangePriorThresholdIndex = i
+                
+                avgRangePrior = (rangePrior + (pUs[i + 1] - pLs[i + 1])) / 2
+                area += abs(avgRangePrior) * abs(thresholds[i + 1] - thresholds[i])
+
+            elif pLs[i] > pUs[i] and pLs[i + 1] < pUs[i + 1]:
+                x0 = thresholds[i]
+                x1 = thresholds[i + 1]
+                if x0 != x1:
+                    pL0 = pLs[i]
+                    pL1 = pLs[i + 1]
+                    pU0 = pUs[i]
+                    pU1 = pUs[i + 1]
+                    x = sy.symbols('x')
+                    xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                    yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                    avgRangePrior = (0 + (pUs[i + 1] - pLs[i + 1])) / 2
+                    area += abs(avgRangePrior) * abs(thresholds[i + 1] - xIntersect[0])
+
+            elif pLs[i] < pUs[i] and pLs[i + 1] > pUs[i + 1]:
+                x0 = thresholds[i]
+                x1 = thresholds[i + 1]
+                if x0 != x1:
+                    pL0 = pLs[i]
+                    pL1 = pLs[i + 1]
+                    pU0 = pUs[i]
+                    pU1 = pUs[i + 1]
+                    x = sy.symbols('x')
+                    xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                    if len(xIntersect) == 0:
+                        xIntersect = [0]
+                    yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
+                    avgRangePrior = (0 + (pUs[i] - pLs[i])) / 2
+                    area += abs(avgRangePrior) * abs(xIntersect[0] - thresholds[i + 1])
+    
+    return area, largestRangePrior, largestRangePriorThresholdIndex
+
+# Parallelized main function
+def applicableArea(modelRow, thresholds, utils, p, HoverB, num_workers=4):
     uTN, uTP, uFN, uFP, u = utils
     area = 0
     largestRangePrior = 0
@@ -337,94 +544,31 @@ def applicableArea(modelRow, thresholds, utils, p, HoverB):
     withinRange = False
     priorDistributionArray = []
     leastViable = 1
-    minPrior = 0
-    maxPrior = 0
-    meanPrior = 0
     
-    #calculate pLs, pStars, and pUs
-#     uFP = uTN - (uTP - uFN) * (1 / modelRow['costRatio'])
-#     HoverB = (1 / costRatio)
-    # uFP = uTN - (uTP - uFN) * HoverB
     pLs, pStars, pUs = modelPriorsOverRoc(modelRow, uTN, uTP, uFN, uFP, u)
-    
-    #modify the classification thresholds
-    thresholds = np.array(thresholds)
-    thresholds = np.where(thresholds > 1, 1, thresholds)
+    thresholds = np.where(np.array(thresholds) > 1, 1, thresholds)
     thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
     
-    #calculate applicability area
-    for i, prior in enumerate(pLs):
-        if i < len(pLs) - 1:
-            if pLs[i] < pUs[i] and pLs[i + 1] < pUs[i + 1]:
-                
-                #find the range of priors
-                rangePrior = pUs[i] - pLs[i]
-                
-                #check if it is the largest range of priors
-                if rangePrior > largestRangePrior:
-                    largestRangePrior = rangePrior
-                    largestRangePriorThresholdIndex = i
-                    
-                # trapezoidal rule (upper + lower base)/2
-                avgRangePrior = (rangePrior + (pUs[i + 1] - pLs[i + 1])) / 2 
-                
-                #accumulate areas
-                area += abs(avgRangePrior) * abs(thresholds[i + 1] - thresholds[i])
-                
-            #where pL and pU cross into pU > pL
-            elif pLs[i] > pUs[i] and pLs[i + 1] < pUs[i + 1]:                
-                x0 = thresholds[i]
-                x1 = thresholds[i+1]
-                if x0 != x1:
-                    pL0 = pLs[i]
-                    pL1 = pLs[i+1]
-                    pU0 = pUs[i]
-                    pU1 = pUs[i+1]
-                    x = sy.symbols('x')
-                    
-                    #solve for x and y at the intersection
-                    xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
-                    yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
-                    
-                    # trapezoidal rule (upper + lower base)/2
-                    avgRangePrior = (0 + (pUs[i + 1] - pLs[i + 1])) / 2
-                    
-                    #accumulate areas
-                    area += abs(avgRangePrior) * abs(thresholds[i + 1] - xIntersect[0])
-                
-            elif (pLs[i] < pUs[i] and pLs[i + 1] > pUs[i + 1]):
-                x0 = thresholds[i]
-                x1 = thresholds[i+1]
-                if x0 != x1:
-                    pL0 = pLs[i]
-                    pL1 = pLs[i+1]
-                    pU0 = pUs[i]
-                    pU1 = pUs[i+1]
-                    x = sy.symbols('x')
-                    
-                    #solve for x and y at the intersection
-                    xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
-                    
-                    if len(xIntersect) == 0:
-                        xIntersect = [0]
-                        
-                    yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
-                    
-                    #accumulate areas
-                    avgRangePrior = (0 + (pUs[i] - pLs[i])) / 2 # trapezoidal rule (upper + lower base)/2
-                    area += abs(avgRangePrior) * abs(xIntersect[0] - thresholds[i + 1])
-                
-    #round the calculation
-    area = np.round(float(area), 3)
+    chunk_size = len(pLs) // num_workers
+    results = []
     
-    #due to minor calculation inaccuracies in the previous iterations of the function. This should no longer apply. All ApAr 
-    #should be less than 1
-    if(area > 1):
-        area = 1           
-    #check if the specified prior is within the ranges of priors
-    if((p > minPrior) & (p < maxPrior)):
-        withinRange = True
-                
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = []
+        for i in range(num_workers):
+            start = i * chunk_size
+            end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
+            futures.append(executor.submit(calculate_area_chunk, start, end, pLs, pUs, thresholds))
+        
+        for future in concurrent.futures.as_completed(futures):
+            chunk_area, chunk_largest_range, chunk_largest_index = future.result()
+            area += chunk_area
+            if chunk_largest_range > largestRangePrior:
+                largestRangePrior = chunk_largest_range
+                largestRangePriorThresholdIndex = chunk_largest_index
+    
+    area = min(np.round(float(area), 3), 1)  # Round and cap area at 1
+    withinRange = (p > 0 and p < largestRangePrior)
+    
     return [area, largestRangePriorThresholdIndex, withinRange, leastViable, uFP]
 
 

@@ -25,7 +25,7 @@ from app import app
 with open("assets/tooltips.json", "r") as f:
     tooltip_data = json.load(f)
 
-loadingText = "Welcome to the home dashboard!\nGraphics can take up to 20 seconds on initial load. Subsequent loading will be faster (~3-5 seconds).\nThank you for your patience!\n\nClick anywhere to dismiss or this message will disappear automatically."
+loadingText = "Welcome to the home dashboard!\nGraphics can take up to 10 seconds on initial load. Subsequent loading will be faster (~5 seconds).\nThank you for your patience!\n\nClick anywhere to dismiss or this message will disappear automatically."
 
 # Callback to hide the loading overlay either after 3 seconds or on click
 @app.callback(
@@ -134,7 +134,9 @@ layout = html.Div([
                 ], style={'width': '100%'}),
                 html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
                 html.Button("Generate Report", id="generate-report-button", n_clicks=0),
+                html.Button("Generate Report with ApAr", id="generate-apar-report-button", n_clicks=0),
                 dcc.Download(id="download-report"),
+                dcc.Download(id="download-report-wapar"),
             ], style={'paddingLeft': '10px'})
         ], style={'height': '100%', 'width': '30%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
         html.Div([
@@ -513,6 +515,38 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
     # If conditions are not met (no click or no figure), return None and don't reset clicks
     return None, n_clicks
 
+@app.callback(
+    [Output("download-report-wapar", "data"),
+     Output("generate-apar-report-button", "n_clicks")],
+    [Input("generate-apar-report-button", "n_clicks"),
+    #  Input("roc-store", "data"),
+     Input('roc-plot-store', 'data'),
+     Input('utility-plot-store', 'data'),
+     Input('distribution-plot-store', 'data'),
+     Input('parameters-store', 'data'),
+     ],  # Access the figure from the graph component (roc-store)
+    prevent_initial_call=True
+)
+def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_dict):
+        
+
+    # Check if the button has been clicked and the ROC plot data is present
+    if n_clicks and roc_dict:
+        # Recreate the figure from the stored data (e.g., FPR and TPR)
+        # fig = create_roc_plot(figure['fpr'], figure['tpr'])
+        roc_fig = go.Figure(roc_dict)
+        utility_fig = go.Figure(utility_dict)
+        binormal_fig = go.Figure(binormal_dict)
+        
+        # Generate the PDF report with the dynamic figure
+        pdf_io = create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict)
+        
+        # Send the generated PDF as a downloadable file and reset the click counter
+        return dcc.send_bytes(pdf_io.read(), "report.pdf"), 0
+    
+    # If conditions are not met (no click or no figure), return None and don't reset clicks
+    return None, n_clicks
+
         
 
 
@@ -584,7 +618,7 @@ imported = False
      State('toggle-draw-mode', 'children'),
      State('data-type-dropdown', 'value')],
      State('shape-store', 'data'),
-    prevent_initial_call='initial_duplicate'
+    prevent_initial_call=True
 )
 def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, n_clicks, figure, roc_store, button_text, current_mode, shape_store):
     global previous_values
@@ -607,6 +641,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     # clear or extract shapes
     shapes = shape_store if shape_store else []
 
+    print(trigger_id)
     info_text = ''
     if not ctx.triggered:
         slider_cutoff = 0.5
@@ -672,7 +707,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     
     # if entered a mode not in the list, return nothing
     elif data_type not in ['imported', 'simulated']:
-        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None, '', '', None
+        return go.Figure(), "", 0.5, "", go.Figure(), go.Figure(), True, '', '', '', '', '', '', '', '', '', None, '', '', None, '', ''
    
     # otherwise, use previously saved data
     else:
