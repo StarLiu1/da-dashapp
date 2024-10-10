@@ -57,8 +57,26 @@ layout = html.Div([
                 ),
                 
             ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '60px'}),
+            
             html.Div([
+
+                # Custom Modal for class input fields
+                # Input section for class names, initially hidden
+                html.Div(
+                    id='class-name-inputs',
+                    children=[
+                        html.Label("Enter the name for the positive class:"),
+                        dcc.Input(id='positive-class-name', type='text', placeholder='Positive Class', debounce=True),
+                        html.Br(),
+                        html.Label("Enter the name for the negative class:"),
+                        dcc.Input(id='negative-class-name', type='text', placeholder='Negative Class', debounce=True),
+                        html.Br(),
+                        html.Button("Submit", id="submit-classes", n_clicks=0)
+                    ],
+                    style={'display': 'none'}  # Hidden by default
+                ),
                 html.Div(id='input-fields', style={'width': '100%', 'padding': 0}),
+                
                 html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 0, 'marginBottom': 5}),
                 html.Div([
                     dcc.Slider(
@@ -283,7 +301,7 @@ layout = html.Div([
     dcc.Store(id='utility-plot-store'),
     dcc.Store(id='distribution-plot-store'),
     dcc.Store(id='parameters-store'),
-
+    dcc.Store(id='labelnames-store'),
     # dcc.Store(id='drawing-mode', data=False)
     create_footer(),
 
@@ -367,9 +385,12 @@ def update_input_fields(data_type):
     elif data_type == "imported":
         return html.Div([
             dcc.ConfirmDialog(
+                id='confirm-dialog',
                 message='Please make sure the CSV file you upload has "true_labels" and "predictions" columns. Currently, we are limited to binary classification problems. Thank you for understanding!',
                 displayed=True,  # Initially hidden
             ),
+            # Inputs for class names, initially hidden
+            
             dcc.Upload(
                 id={'type': 'upload-data', 'index': 0},
                 children=html.Div([
@@ -470,6 +491,43 @@ def show_popup(contents):
     return False  # Hide otherwise
 
 
+# Show input fields when "imported" is selected
+@app.callback(
+    Output('class-name-inputs', 'style', allow_duplicate=True),
+    Input('data-type-dropdown', 'value'),
+    Input({'type': 'upload-data', 'index': ALL}, 'contents'), 
+    State('class-name-inputs', 'style')
+)
+def show_class_name_inputs(data_type, content, current_style):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]  
+
+    if (trigger_id == '{"index":0,"type":"upload-data"}'):
+        return {'display': 'block'}
+    if data_type == "imported":
+        return {'display': 'block'}  # Show the input fields
+    return {'display': 'none'}  # Hide the input fields if not "imported"
+
+# Callback to process inputs and close the modal after submission
+@app.callback(
+    Output('labelnames-store', 'data'),
+    Output('class-name-inputs', 'style', allow_duplicate=True),
+    Input('submit-classes', 'n_clicks'),
+    
+    State('positive-class-name', 'value'),
+    State('negative-class-name', 'value'),
+    prevent_initial_call=True
+)
+def submit_class_names(n_clicks, pos_class, neg_class):
+    
+    if (n_clicks and pos_class and neg_class):
+        names = [pos_class, neg_class]
+        print(names)
+        return names, {'display': 'none'}
+    return ['Positive', 'Negative'], {'display': 'block'}  # Keep modal open if inputs are missing
+
+
+
 @app.callback(
     Output({'type': 'dynamic-output', 'index': MATCH}, 'children'),
     Output({'type': 'interval-component', 'index': MATCH}, 'disabled'),
@@ -550,7 +608,15 @@ previous_values = {
     'curve_tpr': [0, 0.5, 0],
     # 'curve_fpr': [0, 0.1, 0.2, 0.4, 0.6, 0.8, 1],
     # 'curve_tpr': [0, 0.4, 0.5, 0.6, 0.8, 0.95, 1],
-    'pauc': "Toggle line mode and select region of interest."
+    'pauc': "Toggle line mode and select region of interest.",
+    'fpr_op': 0,
+    'tpr_op': 0,
+    'fpr_cut': 0,
+    'tpr_cut': 0,
+    'cutoff': 0,
+    'HoverB': 1,
+    'slope_of_interest': 1,
+    'cutoff_optimal_pt': 0
 }
 
 roc_plot_group = go.Figure()
@@ -602,14 +668,23 @@ imported = False
     # Input('initial-interval', 'n_intervals'),
     Input('toggle-draw-mode', 'n_clicks'),  # New input for button clicks
     
-    [State('roc-plot', 'figure'),
-     State('roc-store', 'data'),
-     State('toggle-draw-mode', 'children'),
-     State('data-type-dropdown', 'value')],
-     State('shape-store', 'data'),
+    Input('submit-classes', 'n_clicks'),
+    Input('labelnames-store', 'data'),
+    [
+    
+    
+    State('roc-plot', 'figure'),
+    State('roc-store', 'data'),
+    State('toggle-draw-mode', 'children'),
+    State('data-type-dropdown', 'value'),
+    State('shape-store', 'data'),
+    
+    # State('positive-class-name', 'value'),
+    # State('negative-class-name', 'value'),
+    ],
     prevent_initial_call=True
 )
-def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, n_clicks, figure, roc_store, button_text, current_mode, shape_store):
+def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, n_clicks, submitName_click, label_names, figure, roc_store, button_text, current_mode, shape_store):
     global previous_values
     global imported
     global roc_plot_group
@@ -630,7 +705,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     # clear or extract shapes
     shapes = shape_store if shape_store else []
 
-    # print(trigger_id)
+    print(trigger_id)
     info_text = ''
     if not ctx.triggered:
         slider_cutoff = 0.5
@@ -649,6 +724,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         draw_mode = 'point'
         button_text = 'Switch to Line Mode (select region for partial AUC)'
 
+    
     # if trigger_id == 'initial-interval':
     #     if initial_intervals == 0:
     #         slider_cutoff = 0.51
@@ -657,7 +733,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     #     draw_mode = 'point'
     #     button_text = 'Switch to Line Mode (select region for partial AUC)'
 
-        
+    print(label_names)
     # based on mode
     if (data_type == 'imported' and upload_contents): 
         if upload_contents[0] is None:
@@ -766,7 +842,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         previous_values['thresholds'] = thresholds
         previous_values['curve_fpr'] = curve_points[:,0]
         previous_values['curve_tpr'] = curve_points[:,1]
-
+    
     # on initial load trigger
     if not ctx.triggered or trigger_id == 'initial-interval':
         # load default simulation parameters
@@ -774,6 +850,8 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         tpr_value = np.sum((np.array(true_labels) == 1) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 1)
         fpr_value = np.sum((np.array(true_labels) == 0) & (np.array(predictions) >= slider_cutoff)) / np.sum(true_labels == 0)
         cutoff = slider_cutoff
+        previous_values['cutoff'] = cutoff
+
         tpr_value_optimal_pt = 0.5
         fpr_value_optimal_pt = 0.5
         cutoff_optimal_pt = 0.5
@@ -781,8 +859,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         H = uTN - uFP
         B = uTP - uFN + 0.000000001
         HoverB = H/B
-        slope_of_interest = HoverB * (1 - 0.5) / 0.5
+        previous_values['HoverB'] = HoverB
 
+        slope_of_interest = HoverB * (1 - 0.5) / 0.5
+        previous_values['slope_of_interest'] = slope_of_interest
         cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
 
         closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
@@ -791,7 +871,12 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
         tpr_value_optimal_pt = original_tpr
         fpr_value_optimal_pt = original_fpr
+
+        previous_values['tpr_op'] = original_tpr
+        previous_values['fpr_op'] = original_fpr
+
         cutoff_optimal_pt = closest_prob_cutoff
+        previous_values['cutoff_optimal_pt'] = cutoff_optimal_pt
 
         # drawing mode status
         if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
@@ -809,7 +894,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             H = uTN - uFP
             B = uTP - uFN + 0.000000001
             HoverB = H/B
+            previous_values['HoverB'] = HoverB
+
             slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+            previous_values['slope_of_interest'] = slope_of_interest
             cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
 
             closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
@@ -818,13 +906,24 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
             tpr_value_optimal_pt = original_tpr
             fpr_value_optimal_pt = original_fpr
+
+            previous_values['tpr_op'] = original_tpr
+            previous_values['fpr_op'] = original_fpr
+            
             cutoff_optimal_pt = closest_prob_cutoff
+            previous_values['cutoff_optimal_pt'] = cutoff_optimal_pt
+
             predictions = np.array(predictions)
 
             tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
             fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
-            cutoff = slider_cutoff
             
+            previous_values['tpr_cut'] = tpr_value
+            previous_values['fpr_cut'] = fpr_value
+            
+            cutoff = slider_cutoff
+            previous_values['cutoff'] = cutoff
+
             # change button status
             if trigger_id in ['toggle-draw-mode'] and 'Line' in button_text:
                 draw_mode = 'point'
@@ -1049,7 +1148,11 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 H = uTN - uFP
                 B = uTP - uFN + 0.000000001
                 HoverB = H/B
+                previous_values['HoverB'] = HoverB
+
                 slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+                previous_values['slope_of_interest'] = slope_of_interest
+                
                 cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
 
                 closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
@@ -1059,10 +1162,16 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 tpr_value_optimal_pt = original_tpr
                 fpr_value_optimal_pt = original_fpr
                 cutoff_optimal_pt = closest_prob_cutoff
+                previous_values['cutoff_optimal_pt'] = cutoff_optimal_pt    
 
                 fpr_value = fpr_value_optimal_pt
                 tpr_value = tpr_value_optimal_pt
+
+                previous_values['tpr_cut'] = tpr_value
+                previous_values['fpr_cut'] = fpr_value
+
                 cutoff = closest_prob_cutoff
+                previous_values['cutoff'] = cutoff
 
             # if we are in regular point selection mode
             else:
@@ -1073,13 +1182,21 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 closest_idx = np.argmin(distances)
                 fpr_value = fpr[closest_idx]
                 tpr_value = tpr[closest_idx]
+                previous_values['tpr_cut'] = tpr_value
+                previous_values['fpr_cut'] = fpr_value
+
                 cutoff = thresholds[closest_idx]
                 slider_cutoff = cutoff
-                
+                previous_values['cutoff'] = cutoff
+
                 H = uTN - uFP
                 B = uTP - uFN + 0.000000001
                 HoverB = H/B
+                previous_values['HoverB'] = HoverB
+
                 slope_of_interest = HoverB * (1 - pD) / pD if pD else HoverB * (1 - 0.5) / 0.5
+                previous_values['slope_of_interest'] = slope_of_interest
+
                 cutoff_rational = find_fpr_tpr_for_slope(curve_points, slope_of_interest)
 
                 closest_fpr, closest_tpr = cutoff_rational[0], cutoff_rational[1]
@@ -1088,14 +1205,30 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
                 tpr_value_optimal_pt = original_tpr
                 fpr_value_optimal_pt = original_fpr
+                previous_values['tpr_op'] = original_tpr
+                previous_values['fpr_op'] = original_fpr
                 cutoff_optimal_pt = closest_prob_cutoff
-        
+                previous_values['cutoff_optimal_pt'] = cutoff_optimal_pt
+
+        elif trigger_id == 'submit-classes':
+            pos_label, neg_label = label_names[0], label_names[1]
+            tpr_value_optimal_pt = previous_values['tpr_op']
+            fpr_value_optimal_pt = previous_values['fpr_op']
+            tpr_value = previous_values['tpr_cut']
+            fpr_value = previous_values['fpr_cut']
+            partial_auc = previous_values['pauc']
+            cutoff = previous_values['cutoff']
+            HoverB = previous_values['HoverB']
+            slope_of_interest = previous_values['slope_of_interest']
+            cutoff_optimal_pt = previous_values['cutoff_optimal_pt']
+            print(pos_label)
         # if not action trigger on the roc plot
         else:
+            print('yep')
             return dash.no_update
     
     # print(button_text)
-
+    print('eereeee')
     # remove filled area if we are switching back to point mode
     if trigger_id == 'toggle-draw-mode' and 'Line' in button_text:
 
@@ -1407,14 +1540,20 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     utility_fig.update_layout(
         margin=dict(l=30, r=20, t=30, b=70),
     )
-
+    print('it got to here')
     # distributions plots depending on the mode
-    if data_type == 'imported' and upload_contents or (upload_contents and trigger_id == 'imported-interval'):
+    if (data_type == 'imported' and upload_contents) or (upload_contents and trigger_id == 'imported-interval') or (trigger_id == 'submit-classes'):
+        print('what about here?')
+        if label_names is None:
+            pos_label = 'Positive'
+            neg_label = 'Negative'
+        else:
+            pos_label, neg_label = label_names[0], label_names[1]
         distribution_fig = go.Figure()
         # distribution_fig.add_trace(go.Histogram(x=predictions, name='Diseased', opacity=0.75, marker=dict(color='grey')))
         distribution_fig.add_trace(go.Histogram(
             x=[np.round(pred, 3) for pred, label in zip(predictions, true_labels) if label == 1],
-            name='Diseased',
+            name=pos_label,
             opacity=0.5,
             marker=dict(color='blue')
         ))
@@ -1422,7 +1561,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         # Add histogram for the non-diseased group (true_label == 0)
         distribution_fig.add_trace(go.Histogram(
             x=[np.round(pred, 3) for pred, label in zip(predictions, true_labels) if label == 0],
-            name='Non-Diseased',
+            name=neg_label,
             opacity=0.5,
             marker=dict(color='red')
         ))
