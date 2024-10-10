@@ -34,7 +34,7 @@ layout = html.Div([
         html.H1("Team", style={"marginTop": "5px", "marginBottom": "0px"}),
         html.Ul([
             html.Li("Star SD Liu, MS - PhD Student"),
-            html.Li("Harold P. Lehmann, MD, PhD - PI"),
+            html.Li("Harold P. Lehmann, MD, PhD - Mentor"),
             # html.Li("John Smith - Data Scientist"),
             # html.Li("Alice Johnson - Software Engineer"),
             # html.Li("Emily White - UI/UX Designer")

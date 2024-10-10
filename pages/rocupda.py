@@ -133,10 +133,30 @@ layout = html.Div([
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
-                html.Button("Generate Report", id="generate-report-button", n_clicks=0),
-                html.Button("Generate Report with ApAr", id="generate-apar-report-button", n_clicks=0),
-                dcc.Download(id="download-report"),
-                dcc.Download(id="download-report-wapar"),
+                # html.Button("Generate Report", id="generate-report-button", n_clicks=0),
+                
+                # dcc.Download(id="download-report"),
+                html.Div([
+                    dcc.Loading(
+                        id="loading-spinner",
+                        type="circle",
+                        fullscreen=False,
+                        children=[
+                            html.Button("Generate Report", id="generate-report-button", n_clicks=0, style={
+                                'width': '48%', 
+                            }),
+                            dcc.Download(id="download-report"),
+                            html.Button("Generate Report with ApAr", id="generate-apar-report-button", n_clicks=0, style={
+                                'width': '48%', 
+                            }),
+                            dcc.Download(id="download-report-wapar"),
+                        ],
+                        style={'display': 'inline-block', 'margin-left': 'auto', 'margin-right': 'auto'}
+                    ),
+                    
+                ]),
+                
+                
             ], style={'paddingLeft': '10px'})
         ], style={'height': '100%', 'width': '30%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
         html.Div([
