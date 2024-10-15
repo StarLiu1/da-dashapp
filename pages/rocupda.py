@@ -65,12 +65,14 @@ layout = html.Div([
                 html.Div(
                     id='class-name-inputs',
                     children=[
-                        html.Label("Enter the name for the positive class:"),
-                        dcc.Input(id='positive-class-name', type='text', placeholder='Positive Class', debounce=True),
                         html.Br(),
-                        html.Label("Enter the name for the negative class:"),
+                        html.Label("Enter label names:"),
+                        dcc.Input(id='positive-class-name', type='text', placeholder='Positive Class', debounce=True, 
+                                  style={'width': ''}),
+                        # html.Br(),
+                        html.Label(" and  "),
                         dcc.Input(id='negative-class-name', type='text', placeholder='Negative Class', debounce=True),
-                        html.Br(),
+                        # html.Br(),
                         html.Button("Submit", id="submit-classes", n_clicks=0)
                     ],
                     style={'display': 'none'}  # Hidden by default
@@ -522,7 +524,7 @@ def submit_class_names(n_clicks, pos_class, neg_class):
     
     if (n_clicks and pos_class and neg_class):
         names = [pos_class, neg_class]
-        print(names)
+        # print(names)
         return names, {'display': 'none'}
     return ['Positive', 'Negative'], {'display': 'block'}  # Keep modal open if inputs are missing
 
@@ -705,7 +707,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     # clear or extract shapes
     shapes = shape_store if shape_store else []
 
-    print(trigger_id)
+    # print(trigger_id)
     info_text = ''
     if not ctx.triggered:
         slider_cutoff = 0.5
@@ -733,7 +735,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     #     draw_mode = 'point'
     #     button_text = 'Switch to Line Mode (select region for partial AUC)'
 
-    print(label_names)
+    # print(label_names)
     # based on mode
     if (data_type == 'imported' and upload_contents): 
         if upload_contents[0] is None:
@@ -1221,14 +1223,14 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             HoverB = previous_values['HoverB']
             slope_of_interest = previous_values['slope_of_interest']
             cutoff_optimal_pt = previous_values['cutoff_optimal_pt']
-            print(pos_label)
+            # print(pos_label)
         # if not action trigger on the roc plot
         else:
-            print('yep')
+            # print('yep')
             return dash.no_update
     
     # print(button_text)
-    print('eereeee')
+    # print('eereeee')
     # remove filled area if we are switching back to point mode
     if trigger_id == 'toggle-draw-mode' and 'Line' in button_text:
 
@@ -1540,10 +1542,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     utility_fig.update_layout(
         margin=dict(l=30, r=20, t=30, b=70),
     )
-    print('it got to here')
+    # print('it got to here')
     # distributions plots depending on the mode
     if (data_type == 'imported' and upload_contents) or (upload_contents and trigger_id == 'imported-interval') or (trigger_id == 'submit-classes'):
-        print('what about here?')
+        # print('what about here?')
         if label_names is None:
             pos_label = 'Positive'
             neg_label = 'Negative'
