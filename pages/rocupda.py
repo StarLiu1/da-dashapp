@@ -1627,7 +1627,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 'xanchor': 'center'
             },
             xaxis_title='Value',
-            yaxis_title='Count',
+            yaxis_title='Probability Density',
             template='plotly_white',
         )
         distribution_fig.update_layout(
@@ -1646,6 +1646,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
 
     parameter_dict = {
         'slider_cutoff': slider_cutoff,
+        'optimal_cutoff': np.round(cutoff_optimal_pt, 2),
         'uTP': uTP,
         'uFP': uFP,
         'uTN': uTN,
@@ -1654,7 +1655,12 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         'disease_mean': disease_mean,
         'disease_std': disease_std,
         'healthy_mean': healthy_mean,
-        'healthy_std': healthy_std
+        'healthy_std': healthy_std,
+        'pL': float(pL[0]),
+        'pStar': float(pStar[0]),
+        'pU': float(pU[0]),
+        'slope': np.round(slope_of_interest, 2)
+
     }
 
     # set default
