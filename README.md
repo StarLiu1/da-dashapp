@@ -21,7 +21,7 @@ For a complete assessment of model performance and applicability, we recommend u
 
 The [Applicability Area (ApAr)](https://pubmed.ncbi.nlm.nih.gov/38222359/) dashboard uses a decision-analytic and utility-based approach to evaluate clinical predictive models. It communicates the **range of prior probabilities** and **test cutoffs** where the model has **positive utility**, meaning it is useful.
 
-> Please note: *Loading times may vary between 5 to 50 seconds.*
+> Please note: *Loading times may vary between 5 to 30 seconds.*
 
 ## Info Buttons
 
