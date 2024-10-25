@@ -1098,7 +1098,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
     # print(area)
     apar_fig.update_layout(
         title={
-            'text': 'Applicable Area',
+            'text': 'Applicability Area (ApAr)',
             'x': 0.5,
             'xanchor': 'center'
         },

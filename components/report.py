@@ -49,6 +49,8 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
     pStar = np.round(parameters_dict['pStar'], 2)
     pU = np.round(parameters_dict['pU'], 2)
     slope = np.round(parameters_dict['slope'], 2)
+    pos_label = parameters_dict['pos_label']
+    neg_label = parameters_dict['neg_label']
     # Convert figure to PNG image in memory (bytes object)
     roc_img_bytes = pio.to_image(roc_fig, format='png')
     utility_img_bytes = pio.to_image(utility_fig, format='png')
@@ -67,7 +69,12 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
     EU_base64 = latex_to_image_base64(r"\frac{H}{H + B}")
 
     apar_img_base64 = ""
+    num_figs = 3
+    fig_text = 'distribution plot, ROC plot, and expected utility plot'
     if apar_fig is not None:
+        num_figs = 4
+        fig_text = 'distribution plot, ROC plot, expected utility plot, and Applicability Area plot'
+
         apar_img_bytes = pio.to_image(apar_fig, format='png')
         apar_img_base64 = base64.b64encode(apar_img_bytes).decode('utf-8')
     
@@ -76,6 +83,14 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
     <html>
     <head>
         <style>
+            @page {{
+                margin: 20mm;
+                @bottom-right {{
+                    content: "Page " counter(page) " of " counter(pages);
+                    font-size: 12px;
+                    color: #333;
+                }}
+            }}
             p, ul, ol {{
                 margin-bottom: 20px;
             }}
@@ -110,8 +125,8 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
     </head>
     <body>
         <h3>Clinical Utility Profiling - Decision Analytic Dashboard Report </h2>
-        <p>This report contains all 3 graphs from the dashboard (distribution plot, ROC plot, and 
-            expected utility plot). We enhance the value by adding generic interpretations based on the
+        <p>This report contains all {num_figs} graphs from the dashboard ({fig_text}). 
+            We enhance the value by adding generic interpretations based on the
             model parameters, local utility tradeoffs, and the prevalence of disease in the target population. 
             Interpretations are gounded in decision science and utility theory.
         </p>
@@ -166,22 +181,22 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
             </tr>
             <tr>
                 <td>Positive Mean</td>
-                <td>Mean of the positive group</td>
+                <td>{pos_label} group mean</td>
                 <td>{disease_mean}</td>
             </tr>
             <tr>
                 <td>Positive Std</td>
-                <td>Standard deviation of the positives</td>
+                <td>{pos_label} group standard deviation</td>
                 <td>{disease_std}</td>
             </tr>
             <tr>
                 <td>Negative Mean</td>
-                <td>Mean of the negative group</td>
+                <td>{neg_label} group mean</td>
                 <td>{healthy_mean}</td>
             </tr>
             <tr>
                 <td>Negative Std</td>
-                <td>Standard deviation of the negatives</td>
+                <td>{neg_label} group standard deviation</td>
                 <td>{healthy_std}</td>
             </tr>
         </table>
@@ -199,12 +214,12 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
             </tr>
             <tr>
                 <td>Probability of disease</td>
-                <td>Target population disease prevalence</td>
+                <td>Target population {pos_label} prevalence</td>
                 <td>{pD}</td>
             </tr>
             <tr>
                 <td>Slope of the optimal point</td>
-                <td> (H / B) * ((1-pD) / pD)</td>
+                <td> (H / B) * ((1-pD) / pD), where pD is prevalence of outcome (i.e., disease) /td>
                 <td>{slope}</td>
             </tr>
             <tr>
@@ -218,7 +233,7 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
             <img src="data:image/png;base64,{binormal_img_base64}" alt="Figure" style="width: 98%; height: 98%;>
             <div class="content-section">
                 <p>In this plot, the x-axis represents the value of a continuou
-                    s variable that differentiates between the Diseased and Healthy groups.
+                    s variable that differentiates between the {pos_label} and {neg_label} groups.
                     The y-axis represents the <strong>probability density</strong>, 
                     which shows the relative likelihood of values for each group.
                 </p>
@@ -227,33 +242,33 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
 
                 <ol>
                     <li><strong>False Positives (FP)</strong> - This area is
-                        where the Healthy group values fall to the right of the cutoff. 
-                        These are instances where Healthy individuals are mistakenly 
-                        categorized as Diseased due to their values being above the cutoff.
+                        where the {neg_label} group values fall to the right of the cutoff. 
+                        These are instances where {neg_label} individuals are mistakenly 
+                        categorized as {pos_label} due to their values being above the cutoff.
                     </li>
 
                     <li><strong>True Positives (TP)</strong> - This area is where the 
-                        Diseased group values are to the right of the cutoff. These are
-                        correctly identified Diseased individuals, as their values exceed 
-                        the threshold, confirming their condition.
+                        {pos_label} group values are to the right of the cutoff. These are
+                        correctly identified {pos_label} individuals, as their values exceed 
+                        the threshold, confirming their {pos_label} status.
                     </li>
 
-                    <li><strong>False Negatives (FN)</strong> - This area is where the Diseased 
+                    <li><strong>False Negatives (FN)</strong> - This area is where the {pos_label} 
                         group values are to the left of the cutoff. These are instances where 
-                        Diseased individuals are mistakenly categorized as Healthy due to their 
+                        {pos_label} individuals are mistakenly categorized as {neg_label} due to their 
                         values being below the cutoff.
                     </li>
 
                     <li><strong>True Negatives (TN)</strong> - This area is where the 
-                        Healthy group values are to the left of the cutoff. These are 
-                        correctly identified Healthy individuals, as their values fall 
-                        below the threshold, confirming their healthy status.
+                        {neg_label} group values are to the left of the cutoff. These are 
+                        correctly identified {neg_label} individuals, as their values fall 
+                        below the threshold, confirming their {neg_label} status.
                     </li>
                 </ol>
 
                 <p>The exact placement of the cutoff influences the proportions of these 
                     four areas, thus impacting the sensitivity and specificity of the 
-                    classification between Diseased and Healthy groups. Adjusting the 
+                    classification between {pos_label} and {neg_label} groups. Adjusting the 
                     cutoff right or left would increase or decrease the areas under each 
                     respective portion of the curves, which is critical in determining 
                     the optimal threshold for classification.
@@ -280,13 +295,13 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
                         <ul>
                             <li>The <strong>x-axis</strong> represents the 
                                 <em>False Positive Rate (FPR)</em>, which is the 
-                                proportion of actual negatives that are incorrectly 
-                                classified as positives. It ranges from 0 to 1.
+                                proportion of actual {neg_label} that are incorrectly 
+                                classified as {pos_label}. It ranges from 0 to 1.
                             </li>
                             <li>The <strong>y-axis</strong> represents 
                                 the <em>True Positive Rate (TPR)</em>, also 
                                 sensitivity or recall, which is the 
-                                proportion of actual positives that are correctly 
+                                proportion of actual {pos_label} that are correctly 
                                 classified. It ranges from 0 to 1.
                             </li>
                         </ul>
@@ -308,16 +323,16 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
                         <strong>Cutoff and Optimal Cutoff Points:</strong>
                         <ul>
                             <li><span style="color: blue;">The blue dot</span> represents a selected 
-                                <em>Cutoff Point</em> at {slider_cutoff}, indicating a 
+                                <em>Cutoff Point</em> at <span style="color: blue;">{slider_cutoff}</span>, indicating a 
                                 specific threshold at which TPR and FPR are calculated.
                             </li>
                             <li><span style="color: red;">The red dot</span> marks the 
-                                <em>Optimal Cutoff Point</em> at {optimal_cutoff}, 
+                                <em>Optimal Cutoff Point</em> at <span style="color: red;">{optimal_cutoff}</span>, 
                                 corresponds to the threshold 
                                 that maximizes the objective, expected utility. 
                                 The optimal point on the ROC is the point with the slope
                                 that corresponds to the product of Harms over Benefit (H/B) and
-                                the inverse of the odds of disease.
+                                the inverse of the odds of outcome (i.e., disease).
                                 The theoretical basis and derivation can be found in Chapter 5 of
                                 <a href="https://onlinelibrary.wiley.com/doi/book/10.1002/9781118341544" target="_blank"> Medical Decision Making</a>.
                             </li>
@@ -352,7 +367,7 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
                 </li>
                 <li>
                     At the <span style="color: red;">Optimal Cutoff (red line) </span>, testing 
-                    maximizes EU given pD.
+                    maximizes EU given pD (prevalence of outcome, i.e., disease).
                 </li>
                 <li>p<sub>L</sub> (<span style="color: orange;">orange dashed line</span> at {pL}): 
                     The <em>Treat-none/Test threshold</em>, marking 
@@ -383,8 +398,72 @@ def create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_
         </div>
 
         {
-            "<img src='data:image/png;base64," + apar_img_base64 + "' alt='Additional Figure'>" +
-            "<p>Some text here...</p>"
+            "<div class='image-container'> <img src='data:image/png;base64," + apar_img_base64 + "' alt='Additional Figure'>" + "</div>" + 
+            "<div class='content-section'>" + 
+                "<p>" + "The applicability area (ApAr) metric involves 1) " + 
+                        "calculating the range of priors from the two thresholds " + 
+                        "(𝑝𝑈(𝑐)  −  𝑝𝐿(𝑐)) and 2) integrating over the entire ROC " + 
+                        "to obtain the cumulative ranges of applicable priors. We eliminate " +
+                        "the need to define a prior beforehand and covers the entire possible range. " +
+                        "A model with an ApAr of zero indicates " +
+                        "employing the model as a test for the probability of disease has " +
+                        "no value compared to a treat-none or treat-all strategy. " +
+                        "On the other hand, high applicability indicates that the model " +
+                        "is useful as a test for the probability of disease over greater " +
+                        "ranges of priors. " +
+                        "Choice of cutoff should be made considering harms and benefit tradeoff, ideally leveraging the optimal point " +
+                        "that maximizes expected utility (See 'Slope of the optimal point' on page 1). " +
+                        "<strong>ApAr answers two key questions: </strong>" + 
+                            "<ol>" +
+                                "<li><strong>Is the model useful at all?</strong>" + 
+                                "</li>" + 
+                                "<li><strong>When and under what context is the model useful?</strong>" + 
+                                "</li>" + 
+                            "</ol>" + 
+                        "Here's a breakdown of the key components in this plot: " + 
+                "</p>" +
+                "<ul>" +
+                    "<li>" +
+                        "<strong>Axes:</strong>" +
+                        "<ul>" +
+                            "<li>The <em>x-axis</em> represents the " +
+                                "<em>probability cutoff threshold</em> " +
+                                "for discrimination. " +
+                            "</li>" +
+                            "<li>The <em>y-axis</em> represents " +
+                                "the <em>prevalence of outcome </em>, "
+                                "in the target population. " +
+                            "</li>" +
+                        "</ul>" +
+                    "</li>" +
+                    "<li>" +
+                        "<strong>Curves:</strong>" +
+                        "<ul>" +
+                            "<li>The <span style='color: blue;'>blue curve</span> represents the " +
+                                "pUs (see page 4 for definition) over the entire ROC. " +
+                            "</li>" +
+                            "<li>The <span style='color: orange;'>orange curve</span> represents the " +
+                                "pLs (see page 4 for definition) over the entire ROC. " +
+                            "</li>" +
+                        "</ul>" +
+                    "</li>" +
+                    "<li>" +
+                        "<strong>Selected cutoff/threshold:</strong>" +
+                        "<ul>" +
+                            "<li><span style='color: black;'>The black dotted line</span> represents " +
+                                "the cutoff for discriminating the two classes at " +
+                                str(np.round(slider_cutoff, 2)) + "." + 
+                            "</li>" +
+                            "<li> At the selected cutoff of " + str(slider_cutoff) + 
+                                ", the range of applicable prior (prevalence of outcome) under which " +
+                                "the model is useful is between the lower pL of " + str(pL) + 
+                                " and the upper pU of " + str(pU) + "." +  
+                                "The model is only useful when pL is less than pU." +
+                            "</li>" +
+                        "</ul>" +
+                    "</li>" +
+                "</ul>"
+            "</div>" 
             if apar_img_base64 else
             ""
         }

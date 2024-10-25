@@ -1419,19 +1419,6 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
                 # Add the filled area trace
                     roc_fig.add_trace(filled_area_trace)
 
-    # display texts for the sliders and markers
-    disease_m_text = f"Disease Mean: {disease_mean:.2f}"
-    disease_sd_text = f"Disease Standard Deviation: {disease_std:.2f}"
-    healthy_m_text = f"Healthy Mean: {healthy_mean:.2f}"
-    healthy_sd_text = f"Healthy Standard Deviation: {healthy_std:.2f}"
-    cutoff_text = f"Raw Cutoff: {cutoff:.2f}" if data_type != 'imported' else f"Probability cutoff: {cutoff:.2f}"
-    utp_text = f"Utility of true positive (uTP): {uTP:.2f}"
-    ufp_text = f"Utility of false positive (uFP): {uFP:.2f}"
-    utn_text = f"Utility of true negative (uTN): {uTN:.2f}"
-    ufn_text = f"Utility of false negative (uFN): {uFN:.2f}"
-    pDisease_text = f"Disease Prevalence: {pD:.2f}"
-    optimal_cutoff_text = f"H/B of {HoverB:.2f} gives a slope of {slope_of_interest:.2f} at the optimal cutoff point {cutoff_optimal_pt:.2f}"
-
     # utility graph lines
     p_values = np.linspace(0, 1, 100)
     line1 = p_values * uTP + (1 - p_values) * uFP
@@ -1607,10 +1594,11 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         x_values = np.linspace(-10, 10, 1000)
         diseased_pdf = norm.pdf(x_values, disease_mean, disease_std)
         healthy_pdf = norm.pdf(x_values, healthy_mean, healthy_std)
-
+        neg_label = 'Healthy'
+        pos_label = 'Diseased'
         distribution_fig = go.Figure()
-        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(diseased_pdf, 3), mode='lines', name='Diseased', line=dict(color='red'), fill='tozeroy'))
-        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(healthy_pdf, 3), mode='lines', name='Healthy', line=dict(color='blue'), fill='tozeroy'))
+        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(diseased_pdf, 3), mode='lines', name=pos_label, line=dict(color='red'), fill='tozeroy'))
+        distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(healthy_pdf, 3), mode='lines', name=neg_label, line=dict(color='blue'), fill='tozeroy'))
         distribution_fig.add_shape(
             type="line",
             x0=slider_cutoff,
@@ -1634,6 +1622,19 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             margin=dict(l=30, r=20, t=50, b=0),
         )
 
+    # display texts for the sliders and markers
+    disease_m_text = f"{pos_label} Mean: {disease_mean:.2f}"
+    disease_sd_text = f"{pos_label} Standard Deviation: {disease_std:.2f}"
+    healthy_m_text = f"{neg_label} Mean: {healthy_mean:.2f}"
+    healthy_sd_text = f"{neg_label} Standard Deviation: {healthy_std:.2f}"
+    cutoff_text = f"Raw Cutoff: {cutoff:.2f}" if data_type != 'imported' else f"Probability cutoff: {cutoff:.2f}"
+    utp_text = f"Utility of true positive (uTP): {uTP:.2f}"
+    ufp_text = f"Utility of false positive (uFP): {uFP:.2f}"
+    utn_text = f"Utility of true negative (uTN): {uTN:.2f}"
+    ufn_text = f"Utility of false negative (uFN): {uFN:.2f}"
+    pDisease_text = f"Disease Prevalence: {pD:.2f}"
+    optimal_cutoff_text = f"H/B of {HoverB:.2f} gives a slope of {slope_of_interest:.2f} at the optimal cutoff point {cutoff_optimal_pt:.2f}"
+
     #store roc data for partial roc calculation
     roc_data = {
         'fpr': fpr.tolist(),  # Convert to list to ensure JSON serializability
@@ -1645,7 +1646,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     binormal_dict = distribution_fig.to_dict()
 
     parameter_dict = {
-        'slider_cutoff': slider_cutoff,
+        'slider_cutoff': np.round(slider_cutoff, 2),
         'optimal_cutoff': np.round(cutoff_optimal_pt, 2),
         'uTP': uTP,
         'uFP': uFP,
@@ -1659,8 +1660,9 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         'pL': float(pL[0]),
         'pStar': float(pStar[0]),
         'pU': float(pU[0]),
-        'slope': np.round(slope_of_interest, 2)
-
+        'slope': np.round(slope_of_interest, 2),
+        'neg_label': neg_label,
+        'pos_label': pos_label
     }
 
     # set default
@@ -1847,7 +1849,7 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
         # print(area)
         apar_fig.update_layout(
             title={
-                'text': 'Applicable Area',
+                'text': 'Applicability Area (ApAr)',
                 'x': 0.5,
                 'xanchor': 'center'
             },
