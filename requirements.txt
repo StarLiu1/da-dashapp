@@ -1,85 +1,9 @@
-alphashape==1.3.1
-anaconda-anon-usage @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_6dviz_3v0e/croot/anaconda-anon-usage_1695305101164/work
-anaconda-catalogs @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_e8tmw882qa/croot/anaconda-catalogs_1685727305051/work
-anaconda-cloud-auth @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_c3pmk6onxv/croot/anaconda-cloud-auth_1694462077833/work
-anaconda-navigator @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_1cm5bladz0/croot/anaconda-navigator_1695236701001/work
-anaconda-project @ file:///Users/cbousseau/work/recipes/ci_py311/anaconda-project_1677964558977/work
-astropy @ file:///Users/cbousseau/work/recipes/ci_py311_2/astropy_1678994125362/work
-autopep8 @ file:///opt/conda/conda-bld/autopep8_1650463822033/work
-bayesian-bootstrap==1.1.0
-bcrypt @ file:///Users/cbousseau/work/recipes/ci_py311/bcrypt_1677931459811/work
-bezier==2023.7.28
-Bottleneck==1.4.0
-Brotli==1.1.0
-brotlipy==0.7.0
-colorama @ file:///Users/cbousseau/work/recipes/ci_py311/colorama_1677925183444/work
-conda-build @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_f467bc822c/croot/conda-build_1690381801495/work
-conda-libmamba-solver @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_48qgqxi1ys/croot/conda-libmamba-solver_1685032355439/work/src
-conda-repo-cli==1.0.41
-conda-token @ file:///Users/paulyim/miniconda3/envs/c3i/conda-bld/conda-token_1662660369760/work
-conda-verify==3.4.2
-cytoolz @ file:///Users/cbousseau/work/recipes/ci_py311/cytoolz_1677931761799/work
-dash-bootstrap-components==1.6.0
-dash-daq==0.5.0
-datasets @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_5eqct1blor/croot/datasets_1684482935720/work
-datashader @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_8f3fxewux9/croot/datashader_1689587619365/work
-distributed @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_46b2z6ud_6/croot/distributed_1686866053959/work
-dm-tree==0.1.8
-flake8 @ file:///Users/cbousseau/work/recipes/ci_py311/flake8_1677931981927/work
-gensim @ file:///Users/cbousseau/work/recipes/ci_py311/gensim_1677971806459/work
-gmpy2 @ file:///Users/cbousseau/work/recipes/ci_py311/gmpy2_1677937751357/work
-graphviz @ file:///Users/cbousseau/work/recipes/ci_py311/python-graphviz_1678001933790/work
-greenlet @ file:///Users/cbousseau/work/recipes/ci_py311/greenlet_1677926210411/work
+dash==2.17.1
+pandas==1.5.3
+numpy==1.26.4
+scikit-learn==1.3.0
+plotly==5.9.0
+sympy==1.11.1
+matplotlib==3.7.1
+scipy==1.14.0
 gunicorn==22.0.0
-hvplot @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_30omxxom8t/croot/hvplot_1686021066828/work
-imagecodecs @ file:///Users/cbousseau/work/recipes/ci_py311_2/imagecodecs_1678994839331/work
-imbalanced-learn @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_26_yvb9nba/croot/imbalanced-learn_1685020915768/work
-jupyter @ file:///Users/cbousseau/work/recipes/ci_py311/jupyter_1677932849424/work
-jupyterlab @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_a5omaxlzc0/croot/jupyterlab_1686179674589/work
-kaleido==0.2.1
-lmdb @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_6fumkuh_c0/croot/python-lmdb_1682522347231/work
-lz4 @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_f0mtitgo6y/croot/lz4_1686063770247/work
-memory-profiler==0.61.0
-munkres==1.1.4
-namex==0.0.7
-navigator-updater==0.4.0
-nltk @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_ebiuq9880w/croot/nltk_1688114154971/work
-openpyxl==3.0.10
-pep8==1.7.1
-pipdeptree==2.23.4
-pooch @ file:///tmp/build/80754af9/pooch_1623324770023/work
-pycurl==7.45.2
-pydocstyle @ file:///Users/cbousseau/work/recipes/ci_py311/pydocstyle_1677933616104/work
-pyodbc @ file:///Users/cbousseau/work/recipes/ci_py311/pyodbc_1678001241548/work
-PyQt5-sip==12.11.0
-PySocks @ file:///Users/cbousseau/work/recipes/ci_py311/pysocks_1677906386870/work
-pytest @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_75ehl8i878/croot/pytest_1690474711033/work
-python-snappy @ file:///Users/cbousseau/work/recipes/ci_py311/python-snappy_1677954153933/work
-reportlab==4.1.0
-rich==13.7.0
-rope @ file:///Users/cbousseau/work/recipes/ci_py311/rope_1677934821109/work
-ruamel-yaml-conda @ file:///Users/cbousseau/work/recipes/ci_py311/ruamel_yaml_1677961911260/work
-s3fs @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_94qu8izf0w/croot/s3fs_1682551484893/work
-sacremoses @ file:///tmp/build/80754af9/sacremoses_1633107328213/work
-scikit-image @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_12rg0hdzgk/croot/scikit-image_1682528304529/work
-Scrapy @ file:///Users/cbousseau/work/recipes/ci_py311/scrapy_1678002824834/work
-seaborn @ file:///Users/cbousseau/work/recipes/ci_py311/seaborn_1677961968762/work
-shap==0.44.0
-sip @ file:///Users/cbousseau/work/recipes/ci_py311/sip_1677923661665/work
-skorch==1.0.0
-spyder @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_f02k_edsgq/croot/spyder_1681934090757/work
-SQLAlchemy @ file:///Users/cbousseau/work/recipes/ci_py311/sqlalchemy_1677934876727/work
-statsmodels @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_d39rlzrllo/croot/statsmodels_1689937269798/work
-tables @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_2d3fzevm9d/croot/pytables_1685123231215/work
-TBB==0.2
-tensorflow==2.15.0
-torchvision==0.16.0
-transformers @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_aecnjml9j7/croot/transformers_1684843867688/work
-Unidecode @ file:///tmp/build/80754af9/unidecode_1614712377438/work
-virtualenv==20.24.6
-weasyprint==62.3
-whatthepatch @ file:///Users/cbousseau/work/recipes/ci_py311/whatthepatch_1677934976505/work
-xgboost==2.0.0
-xlwings @ file:///Users/cbousseau/work/recipes/ci_py311_2/xlwings_1678996173448/work
-yapf @ file:///tmp/build/80754af9/yapf_1615749224965/work
-zopfli==0.2.3
