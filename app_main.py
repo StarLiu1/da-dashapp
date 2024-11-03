@@ -4,6 +4,8 @@ from dash.dependencies import Input, Output
 from app import app, server  # Import app instance from app.py
 from pages import rocupda, apar, readme  # Page layouts
 
+server = app.server
+
 # Define layout and callbacks
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
