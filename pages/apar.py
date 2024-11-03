@@ -39,8 +39,16 @@ def hide_loading_overlay(n_clicks, n_intervals):
     return dash.no_update  # Keep the overlay if nothing has happened yet
 
 
-layout = html.Div([
+def get_layout():
+    return html.Div([
     create_loading_overlay(unique_id = 'apar-loading-overlay', loading_text=loadingText),
+    html.Script("""
+            document.addEventListener("DOMContentLoaded", function() {
+                document.getElementById("apar-loading-overlay").addEventListener("click", function() {
+                    this.style.display = "none";
+                });
+            });
+        """, type="text/javascript"),
     create_app_bar(),
     
     # html.Div([

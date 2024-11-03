@@ -12,7 +12,8 @@ with open("assets/tooltips.json", "r") as f:
 
 
 # Define the layout for the Read Me page
-layout = html.Div([
+def get_layout():
+    return html.Div([
     # Include the app bar at the top
     create_app_bar(),
     

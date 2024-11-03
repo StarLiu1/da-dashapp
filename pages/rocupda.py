@@ -36,13 +36,21 @@ loadingText = "Welcome to the home dashboard!\nGraphics can take up to 10 second
 )
 def hide_loading_overlay(n_clicks, n_intervals):
     # If the overlay is clicked or 3 seconds have passed (n_intervals >= 1), hide the overlay
-    if n_clicks or n_intervals >= 1:
+    if n_clicks or (n_intervals and n_intervals >= 1):
         return {"display": "none"}  # Hides the overlay
     return dash.no_update  # Keep the overlay if nothing has happened yet
 
 # main layout
-layout = html.Div([
+def get_layout():
+    return html.Div([
     create_loading_overlay(unique_id = 'roc-loading-overlay', loading_text=loadingText),
+    html.Script("""
+            document.addEventListener("DOMContentLoaded", function() {
+                document.getElementById("roc-loading-overlay").addEventListener("click", function() {
+                    this.style.display = "none";
+                });
+            });
+        """, type="text/javascript"),
     create_app_bar(),
     html.Div([
         html.Div([

@@ -19,3 +19,42 @@ document.addEventListener('DOMContentLoaded', function () {
         tooltip.style.display = 'none';
     });
 });
+
+// assets/tooltip.js
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("Tooltip JavaScript loaded");
+
+    const observer = new MutationObserver(() => {
+        const overlay = document.getElementById("roc-loading-overlay");
+        if (overlay) {
+            console.log("Overlay found, adding click listener");
+            overlay.addEventListener("click", function () {
+                console.log("Overlay clicked");
+                overlay.style.display = "none";
+            });
+            observer.disconnect();  // Stop observing once the listener is added
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("Tooltip JavaScript loaded");
+
+    const observer = new MutationObserver(() => {
+        const overlay = document.getElementById("apar-loading-overlay");
+        if (overlay) {
+            console.log("Overlay found, adding click listener");
+            overlay.addEventListener("click", function () {
+                console.log("Overlay clicked");
+                overlay.style.display = "none";
+            });
+            observer.disconnect();  // Stop observing once the listener is added
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+
+
