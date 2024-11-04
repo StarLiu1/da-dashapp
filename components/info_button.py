@@ -1,6 +1,5 @@
 from dash import html
 from dash.dependencies import Input, Output, State
-import dash_bootstrap_components as dbc
 
 # Function to create the question mark and the tooltip
 def create_info_mark(tooltip_id, tooltip_text, link_text, link_url, top, left, width):
