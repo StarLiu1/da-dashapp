@@ -1,11 +1,6 @@
 # startup.sh
 # Install necessary system libraries for WeasyPrint
-apt-get update && apt-get install -y \
-    libpango-1.0-0 \
-    libcairo2 \
-    libgdk-pixbuf2.0-0 \
-    libffi-dev \
-    libgobject-2.0-0
+apt install python3-pip libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 libjpeg-dev libopenjp2-7-dev libffi-dev
 
 # Start the Gunicorn server
 gunicorn --bind=0.0.0.0:8000 wsgi:server
