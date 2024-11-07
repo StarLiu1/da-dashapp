@@ -1,179 +1,121 @@
-@if "%SCM_TRACE_LEVEL%" NEQ "4" @echo off
+#!/bin/bash
 
-:: ----------------------
-:: KUDU Deployment Script
-:: Version: 1.0.17
-:: ----------------------
+# ----------------------
+# KUDU Deployment Script
+# Version: 1.0.17
+# ----------------------
 
-:: Prerequisites
-:: -------------
+# Exit on any error
+set -e
 
-:: Verify node.js installed
-where node 2>nul >nul
-IF %ERRORLEVEL% NEQ 0 (
-  echo Missing node.js executable, please install node.js, if already installed make sure it can be reached from current environment.
-  goto error
-)
+# Prerequisites
+# -------------
+# Verify node.js installed
+if ! command -v node &> /dev/null; then
+  echo "Missing node.js executable, please install node.js, or ensure it's in the current environment path."
+  exit 1
+fi
 
-:: Setup
-:: -----
+# Setup
+# -----
 
-setlocal enabledelayedexpansion
+ARTIFACTS="$(dirname "$0")/../artifacts"
 
-SET ARTIFACTS=%~dp0%..\artifacts
+if [ -z "$DEPLOYMENT_SOURCE" ]; then
+  DEPLOYMENT_SOURCE="$(dirname "$0")/."
+fi
 
-IF NOT DEFINED DEPLOYMENT_SOURCE (
-  SET DEPLOYMENT_SOURCE=%~dp0%.
-)
+if [ -z "$DEPLOYMENT_TARGET" ]; then
+  DEPLOYMENT_TARGET="$ARTIFACTS/wwwroot"
+fi
 
-IF NOT DEFINED DEPLOYMENT_TARGET (
-  SET DEPLOYMENT_TARGET=%ARTIFACTS%\wwwroot
-)
+if [ -z "$NEXT_MANIFEST_PATH" ]; then
+  NEXT_MANIFEST_PATH="$ARTIFACTS/manifest"
+  if [ -z "$PREVIOUS_MANIFEST_PATH" ]; then
+    PREVIOUS_MANIFEST_PATH="$ARTIFACTS/manifest"
+  fi
+fi
 
-IF NOT DEFINED NEXT_MANIFEST_PATH (
-  SET NEXT_MANIFEST_PATH=%ARTIFACTS%\manifest
+if [ -z "$KUDU_SYNC_CMD" ]; then
+  # Install kudu sync
+  echo "Installing Kudu Sync"
+  npm install kudusync -g --silent
+  if [ $? -ne 0 ]; then exit 1; fi
 
-  IF NOT DEFINED PREVIOUS_MANIFEST_PATH (
-    SET PREVIOUS_MANIFEST_PATH=%ARTIFACTS%\manifest
-  )
-)
+  # Set Kudu Sync command
+  KUDU_SYNC_CMD="$HOME/.npm-global/bin/kuduSync"
+fi
 
-IF NOT DEFINED KUDU_SYNC_CMD (
-  :: Install kudu sync
-  echo Installing Kudu Sync
-  call npm install kudusync -g --silent
-  IF !ERRORLEVEL! NEQ 0 goto error
+# Utility Functions
+# -----------------
 
-  :: Locally just running "kuduSync" would also work
-  SET KUDU_SYNC_CMD=%appdata%\npm\kuduSync.cmd
-)
-goto Deployment
+select_python_version() {
+  if [ -n "$KUDU_SELECT_PYTHON_VERSION_CMD" ]; then
+    $KUDU_SELECT_PYTHON_VERSION_CMD "$DEPLOYMENT_SOURCE" "$DEPLOYMENT_TARGET" "$DEPLOYMENT_TEMP"
+    PYTHON_RUNTIME=$(<"$DEPLOYMENT_TEMP/__PYTHON_RUNTIME.tmp")
+    PYTHON_VER=$(<"$DEPLOYMENT_TEMP/__PYTHON_VER.tmp")
+    PYTHON_EXE=$(<"$DEPLOYMENT_TEMP/__PYTHON_EXE.tmp")
+    PYTHON_ENV_MODULE=$(<"$DEPLOYMENT_TEMP/__PYTHON_ENV_MODULE.tmp")
+  else
+    PYTHON_RUNTIME="python-2.7"
+    PYTHON_VER="2.7"
+    PYTHON_EXE="/usr/bin/python2.7"
+    PYTHON_ENV_MODULE="virtualenv"
+  fi
+}
 
-:: Utility Functions
-:: -----------------
+# Deployment
+# ----------
 
-:SelectPythonVersion
+echo "Handling python deployment."
 
-IF DEFINED KUDU_SELECT_PYTHON_VERSION_CMD (
-  call %KUDU_SELECT_PYTHON_VERSION_CMD% "%DEPLOYMENT_SOURCE%" "%DEPLOYMENT_TARGET%" "%DEPLOYMENT_TEMP%"
-  IF !ERRORLEVEL! NEQ 0 goto error
+# 1. KuduSync
+if [ "$IN_PLACE_DEPLOYMENT" != "1" ]; then
+  $KUDU_SYNC_CMD -v 50 -f "$DEPLOYMENT_SOURCE" -t "$DEPLOYMENT_TARGET" -n "$NEXT_MANIFEST_PATH" -p "$PREVIOUS_MANIFEST_PATH" -i ".git;.hg;.deployment;deploy.sh"
+fi
 
-  SET /P PYTHON_RUNTIME=<"%DEPLOYMENT_TEMP%\__PYTHON_RUNTIME.tmp"
-  IF !ERRORLEVEL! NEQ 0 goto error
+if [ ! -f "$DEPLOYMENT_TARGET/requirements.txt" ]; then
+  exit 0
+fi
+if [ -f "$DEPLOYMENT_TARGET/.skipPythonDeployment" ]; then
+  exit 0
+fi
 
-  SET /P PYTHON_VER=<"%DEPLOYMENT_TEMP%\__PYTHON_VER.tmp"
-  IF !ERRORLEVEL! NEQ 0 goto error
+echo "Detected requirements.txt. You can skip Python-specific steps with a .skipPythonDeployment file."
 
-  SET /P PYTHON_EXE=<"%DEPLOYMENT_TEMP%\__PYTHON_EXE.tmp"
-  IF !ERRORLEVEL! NEQ 0 goto error
+# 2. Select Python version
+select_python_version
 
-  SET /P PYTHON_ENV_MODULE=<"%DEPLOYMENT_TEMP%\__PYTHON_ENV_MODULE.tmp"
-  IF !ERRORLEVEL! NEQ 0 goto error
-) ELSE (
-  SET PYTHON_RUNTIME=python-2.7
-  SET PYTHON_VER=2.7
-  SET PYTHON_EXE=%SYSTEMDRIVE%\python27\python.exe
-  SET PYTHON_ENV_MODULE=virtualenv
-)
+cd "$DEPLOYMENT_TARGET"
 
-goto :EOF
+# 3. Create virtual environment
+if [ ! -f "env/azure.env.$PYTHON_RUNTIME.txt" ]; then
+  if [ -d "env" ]; then
+    echo "Deleting incompatible virtual environment."
+    rm -rf "env"
+  fi
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Deployment
-:: ----------
+  echo "Creating $PYTHON_RUNTIME virtual environment."
+  $PYTHON_EXE -m $PYTHON_ENV_MODULE env
+fi
 
-:Deployment
-echo Handling python deployment.
+# 4. Install packages
+echo "Pip install requirements."
+env/bin/pip install -r requirements.txt
 
-:: 1. KuduSync
-IF /I "%IN_PLACE_DEPLOYMENT%" NEQ "1" (
-  call :ExecuteCmd "%KUDU_SYNC_CMD%" -v 50 -f "%DEPLOYMENT_SOURCE%" -t "%DEPLOYMENT_TARGET%" -n "%NEXT_MANIFEST_PATH%" -p "%PREVIOUS_MANIFEST_PATH%" -i ".git;.hg;.deployment;deploy.cmd"
-  IF !ERRORLEVEL! NEQ 0 goto error
-)
+# 5. Copy web.config
+if [ -f "$DEPLOYMENT_SOURCE/web.$PYTHON_VER.config" ]; then
+  echo "Overwriting web.config with web.$PYTHON_VER.config"
+  cp -f "$DEPLOYMENT_SOURCE/web.$PYTHON_VER.config" "$DEPLOYMENT_TARGET/web.config"
+fi
 
-IF NOT EXIST "%DEPLOYMENT_TARGET%\requirements.txt" goto postPython
-IF EXIST "%DEPLOYMENT_TARGET%\.skipPythonDeployment" goto postPython
+# 6. Django collectstatic
+if [ -f "$DEPLOYMENT_TARGET/manage.py" ] && [ -d "$DEPLOYMENT_TARGET/env/lib/python$PYTHON_VER/site-packages/django" ]; then
+  if [ ! -f "$DEPLOYMENT_TARGET/.skipDjango" ]; then
+    echo "Collecting Django static files. You can skip Django-specific steps with a .skipDjango file."
+    mkdir -p "$DEPLOYMENT_TARGET/static"
+    env/bin/python manage.py collectstatic --noinput --clear
+  fi
+fi
 
-echo Detected requirements.txt.  You can skip Python specific steps with a .skipPythonDeployment file.
-
-:: 2. Select Python version
-call :SelectPythonVersion
-
-pushd "%DEPLOYMENT_TARGET%"
-
-:: 3. Create virtual environment
-IF NOT EXIST "%DEPLOYMENT_TARGET%\env\azure.env.%PYTHON_RUNTIME%.txt" (
-  IF EXIST "%DEPLOYMENT_TARGET%\env" (
-    echo Deleting incompatible virtual environment.
-    rmdir /q /s "%DEPLOYMENT_TARGET%\env"
-    IF !ERRORLEVEL! NEQ 0 goto error
-  )
-
-  echo Creating %PYTHON_RUNTIME% virtual environment.
-  %PYTHON_EXE% -m %PYTHON_ENV_MODULE% env
-  IF !ERRORLEVEL! NEQ 0 goto error
-
-  copy /y NUL "%DEPLOYMENT_TARGET%\env\azure.env.%PYTHON_RUNTIME%.txt" >NUL
-) ELSE (
-  echo Found compatible virtual environment.
-)
-
-:: 4. Install packages
-echo Pip install requirements.
-env\scripts\pip install -r requirements.txt
-IF !ERRORLEVEL! NEQ 0 goto error
-
-REM Add additional package installation here
-REM -- Example --
-REM env\scripts\easy_install pytz
-REM IF !ERRORLEVEL! NEQ 0 goto error
-
-:: 5. Copy web.config
-IF EXIST "%DEPLOYMENT_SOURCE%\web.%PYTHON_VER%.config" (
-  echo Overwriting web.config with web.%PYTHON_VER%.config
-  copy /y "%DEPLOYMENT_SOURCE%\web.%PYTHON_VER%.config" "%DEPLOYMENT_TARGET%\web.config"
-)
-
-:: 6. Django collectstatic
-IF EXIST "%DEPLOYMENT_TARGET%\manage.py" (
-  IF EXIST "%DEPLOYMENT_TARGET%\env\lib\site-packages\django" (
-    IF NOT EXIST "%DEPLOYMENT_TARGET%\.skipDjango" (
-      echo Collecting Django static files. You can skip Django specific steps with a .skipDjango file.
-      IF NOT EXIST "%DEPLOYMENT_TARGET%\static" (
-        MKDIR "%DEPLOYMENT_TARGET%\static"
-      )
-      env\scripts\python manage.py collectstatic --noinput --clear
-    )
-  )
-)
-
-popd
-
-:postPython
-
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-goto end
-
-:: Execute command routine that will echo out when error
-:ExecuteCmd
-setlocal
-set _CMD_=%*
-call %_CMD_%
-if "%ERRORLEVEL%" NEQ "0" echo Failed exitCode=%ERRORLEVEL%, command=%_CMD_%
-exit /b %ERRORLEVEL%
-
-:error
-endlocal
-echo An error has occurred during web site deployment.
-call :exitSetErrorLevel
-call :exitFromFunction 2>nul
-
-:exitSetErrorLevel
-exit /b 1
-
-:exitFromFunction
-()
-
-:end
-endlocal
-echo Finished successfully.
+echo "Finished successfully."
