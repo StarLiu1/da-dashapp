@@ -66,4 +66,4 @@ jobs:
         with:
           app-name: 'cupda'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_83D9DA5C346D4924AC73014D3CB62B45 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_84495F0C7A3244B08A29FAF7E14A36AF }}
