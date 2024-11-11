@@ -28,3 +28,40 @@ The [Applicability Area (ApAr)](https://pubmed.ncbi.nlm.nih.gov/38222359/) dashb
 Throughout the dashboard, you'll find info buttons that provide additional tips and resources. These are designed to offer helpful context and explanations for key parts of the dashboard.
 
 ---
+
+
+## Getting Started Locally
+
+To get the dashboard running on your local machine, follow these steps:
+
+1. **Clone the Repository:** Clone this repository to your local machine using:
+   ```bash
+   git clone <repository-url>
+
+   ```
+2. **Navigate to the Project Directory:**
+   ```bash
+   cd <project-directory>
+
+   ```
+3. **Create a Python Virtual Environment:**:
+   ```bash
+   python -m venv venv
+
+   ```
+4. **Activate the Virtual Environment:**:
+   ```bash
+   source venv/bin/activate
+   ```
+
+5. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+
+   ```
+6. **Run the dashboard**:
+   ```bash
+   python main.py
+
+   ```
+
