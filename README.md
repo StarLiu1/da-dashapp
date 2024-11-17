@@ -1,3 +1,5 @@
+![Alt Text](dashHome.png)
+
 # Clinical Utility Profiling - Decision Analytic Dashboard
 
 ## About This Dashboard (**Official URL to be released**)
