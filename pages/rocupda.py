@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.metrics import roc_curve, roc_auc_score
 import plotly.graph_objects as go
 from scipy.stats import norm
+# from components.ClinicalUtilityProfiling import error_function
 
 from scipy.optimize import minimize
 from components.app_bar import create_app_bar
@@ -1051,10 +1052,10 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         initial_weights = [1] * len(control_points)
         bounds = [(0, 20) for _ in control_points]
 
-        print(f'control points: {control_points}')
-        print(f'empiric points: {empirical_points}')
-        print(f'initial weights: {initial_weights}')
-        print(f'bounds: {bounds}')
+        # print(f'control points: {control_points}')
+        # print(f'empiric points: {empirical_points}')
+        # print(f'initial weights: {initial_weights}')
+        # print(f'bounds: {bounds}')
         compute_start = time.time()
         # Optimize the weights for fitting - this is a highly intensive calculation
         result = minimize(error_function, initial_weights, args=(control_points, empirical_points), 
