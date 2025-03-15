@@ -2,7 +2,14 @@
 from dash import dcc, html
 from dash.dependencies import Input, Output
 from app import app, server  # Import app instance from app.py
-from pages import rocupda, apar, readme  # Page layouts
+import os
+import sys
+
+# Ensure Cython-compiled modules are in path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'cython_modules'))
+
+# Import page layouts - these will use the Cython modules
+from pages import rocupda, apar, readme
 
 server = app.server
 

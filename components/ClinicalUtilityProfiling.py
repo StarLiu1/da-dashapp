@@ -859,35 +859,35 @@ def error_function(weights, control_points, empirical_points):
     normalized_error = np.sum(distances) / len(empirical_points)
     return normalized_error
 
-def compute_slope(points):
-    """Compute the slope between consecutive points."""
-    slopes = []
-    for i in range(1, len(points)):
-        dy = points[i][1] - points[i-1][1]
-        dx = points[i][0] - points[i-1][0]
-        slope = dy / dx if dx != 0 else np.inf
-        slopes.append(slope)
-    return slopes
+# def compute_slope(points):
+#     """Compute the slope between consecutive points."""
+#     slopes = []
+#     for i in range(1, len(points)):
+#         dy = points[i][1] - points[i-1][1]
+#         dx = points[i][0] - points[i-1][0]
+#         slope = dy / dx if dx != 0 else np.inf
+#         slopes.append(slope)
+#     return slopes
 
-def clean_roc_curve(points):
-    """Remove points iteratively until the curve is always decreasing."""
-    points = np.array(points)
-    cleaned_points = points.tolist()
+# def clean_roc_curve(points):
+#     """Remove points iteratively until the curve is always decreasing."""
+#     points = np.array(points)
+#     cleaned_points = points.tolist()
     
-    while True:
-        slopes = compute_slope(cleaned_points)
-        increase_found = False
+#     while True:
+#         slopes = compute_slope(cleaned_points)
+#         increase_found = False
         
-        for i in range(1, len(slopes)):
-            if slopes[i] > slopes[i-1]:
-                increase_found = True
-                del cleaned_points[i]  # Remove the point causing the increase
-                break
+#         for i in range(1, len(slopes)):
+#             if slopes[i] > slopes[i-1]:
+#                 increase_found = True
+#                 del cleaned_points[i]  # Remove the point causing the increase
+#                 break
         
-        if not increase_found:
-            break
+#         if not increase_found:
+#             break
     
-    return np.array(cleaned_points)
+#     return np.array(cleaned_points)
 
 def compute_slope(points):
     """Compute the slope between consecutive points."""
