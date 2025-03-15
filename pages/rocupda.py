@@ -16,6 +16,7 @@ import plotly.io as pio
 import base64
 from weasyprint import HTML
 import io
+from scipy.special import comb
 from components.report import create_pdf_report, create_roc_plot
 
 from app import app
@@ -859,15 +860,17 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         # print(f'bounds: {bounds}')
         compute_start = time.time()
         # Optimize the weights for fitting - this is a highly intensive calculation
-        result = minimize(error_function_optimized, initial_weights, args=(control_points, empirical_points), 
-                         method='SLSQP', bounds=bounds)
+        # result = minimize(error_function_simple, initial_weights, args=(control_points, empirical_points), 
+        #                  method='SLSQP', bounds=bounds)
+        result = optimize_bezier_fast(control_points, empirical_points, initial_weights)
+
         compute_end = time.time()
         print(f"Minimize computation: {compute_end - compute_start:.4f} seconds")
 
         optimal_weights = result.x
         # print(f'bezier control points:{control_points}')
         
-        curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+        curve_points_gen = rational_bezier_curve_optimized(control_points, optimal_weights, num_points=len(empirical_points))
         
         # print(f'bezier curve points:{curve_points_gen}')
         curve_points = np.array(list(curve_points_gen)) 

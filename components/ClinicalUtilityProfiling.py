@@ -768,34 +768,42 @@ def bernstein_poly(i, n, t_values):
     return coef * t_values**i * (1 - t_values)**(n - i)
 
 
-def rational_bezier_curve(control_points, weights, num_points=100):
-    """Compute the rational Bezier curve with given control points and weights."""
+def rational_bezier_curve_optimized(control_points, weights, num_points=100):
+    """Optimized rational Bezier curve calculation using numpy."""
     n = len(control_points) - 1
     t_values = np.linspace(0, 1, num_points)
     
-    # Preallocate output array
+    # Ensure inputs are numpy arrays
+    control_points = np.asarray(control_points)
+    weights = np.asarray(weights)
+    
+    # Preallocate results
     curve_points = np.zeros((num_points, 2))
     
-    # Vectorize Bernstein polynomial computation
-    for i in range(n + 1):
-        B_i = np.array([bernstein_poly(i, n, t) for t in t_values])
-        weighted_B_i = weights[i] * B_i
+    # For each point
+    for i, t in enumerate(t_values):
+        # Calculate Bernstein basis
+        basis = np.zeros(n + 1)
+        for j in range(n + 1):
+            basis[j] = comb(n, j) * (t**j) * ((1-t)**(n-j))
         
-        # Add contribution to numerator and denominator
-        numerator_contribution = weighted_B_i[:, np.newaxis] * np.array(control_points[i])
-        curve_points += numerator_contribution
+        # Apply weights to basis
+        weighted_basis = weights * basis
         
-    # Normalize by the sum of weighted basis functions
-    denominator = np.zeros(num_points)
-    for i in range(n + 1):
-        B_i = np.array([bernstein_poly(i, n, t) for t in t_values])
-        denominator += weights[i] * B_i
-    
-    # Avoid division by zero
-    valid_indices = denominator > 1e-10
-    curve_points[valid_indices] /= denominator[valid_indices, np.newaxis]
+        # Calculate numerator (weighted sum of control points)
+        numerator = np.zeros(2)
+        for j in range(n + 1):
+            numerator += weighted_basis[j] * control_points[j]
+        
+        # Calculate denominator (sum of weighted basis)
+        denominator = np.sum(weighted_basis)
+        
+        # Ensure no division by zero
+        if denominator > 1e-10:
+            curve_points[i] = numerator / denominator
     
     return curve_points
+
 
 def perpendicular_distance_for_error(points, curve_points):
     """Compute the perpendicular distance from each point to the curve."""
@@ -803,15 +811,17 @@ def perpendicular_distance_for_error(points, curve_points):
     min_distances = np.min(distances, axis=1)
     return min_distances
 
-def error_function_optimized(weights, control_points, empirical_points):
-    """Vectorized computation of error between rational Bezier curve and empirical points."""
-    curve_points = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 2)
+def error_function_simple(weights, control_points, empirical_points):
+    """Simple error function that focuses on performance."""
+    # Generate curve points
+    curve_points = rational_bezier_curve_optimized(control_points, weights)
     
-    # For each empirical point, find the nearest curve point
-    distances = cdist(empirical_points, curve_points, 'euclidean')
+    # Calculate distances efficiently using cdist
+    distances = cdist(empirical_points, curve_points)
     min_distances = np.min(distances, axis=1)
     
-    return np.sum(min_distances) / len(empirical_points)
+    # Return mean distance
+    return np.mean(min_distances)
 
 def compute_slope(points):
     """Compute the slope between consecutive points."""
@@ -912,54 +922,105 @@ def error_function_convex_hull_bezier(weights, fpr, tpr):
     control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
     
     """Compute the error between the rational Bezier curve and the empirical points."""
-    curve_points_gen = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
+    curve_points_gen = rational_bezier_curve_optimized(control_points, weights, num_points=len(empirical_points) * 1)
     curve_points = np.array(list(curve_points_gen))
     distances = perpendicular_distance_for_error(empirical_points, curve_points)
     normalized_error = np.sum(distances) / len(empirical_points)
     return normalized_error
 
 
-# Early termination callback
-class EarlyTermination:
-    def __init__(self):
-        self.best_non_nan_convergence = float('inf')
-        self.best_non_nan_params = None
-        self.consecutive_increases = 0
-        self.last_convergence = None
+def optimize_bezier_fast(control_points, empirical_points, initial_weights=None, max_time=10):
+    """
+    Optimized Bezier curve fitting focused on speed.
+    
+    Args:
+        control_points: Control points array/list
+        empirical_points: Points to fit the curve to
+        initial_weights: Initial weights (optional)
+        max_time: Maximum time in seconds
+        
+    Returns:
+        Optimization result object
+    """
+    from scipy.special import comb
+    
+    # Convert inputs to numpy arrays
+    control_points = np.asarray(control_points)
+    empirical_points = np.asarray(empirical_points)
+    
+    n_controls = len(control_points)
+    
+    # Set default weights if none provided
+    if initial_weights is None:
+        initial_weights = np.ones(n_controls)
+    else:
+        initial_weights = np.asarray(initial_weights)
+        
+    # Set bounds (weights should be positive)
+    bounds = [(0.1, 10.0) for _ in range(n_controls)]
+    
+    # Create early termination callback
+    callback = SimpleEarlyTermination(max_time=max_time)
+    
+    # Run optimization with SLSQP
+    result = minimize(
+        error_function_simple,
+        initial_weights,
+        args=(control_points, empirical_points),
+        method='SLSQP',
+        bounds=bounds,
+        callback=callback,
+        options={
+            'maxiter': 100,
+            'ftol': 1e-4,
+            'disp': False
+        }
+    )
+    
+    # If the callback found a better solution than the final one
+    if callback.best_value < result.fun:
+        result.x = callback.best_params
+        result.fun = callback.best_value
+    
+    return result
 
-    def __call__(self, xk, convergence):
-        print(f"Current convergence: {convergence}")
+class SimpleEarlyTermination:
+    def __init__(self, max_time=10, tolerance=1e-4):
+        self.best_value = float('inf')
+        self.best_params = None
+        self.start_time = time.time()
+        self.max_time = max_time
+        self.tolerance = tolerance
+        self.iterations_without_improvement = 0
         
-        # Check if convergence is NaN
-        if np.isnan(convergence):
-            print("Convergence is NaN, reverting to the best non-NaN convergence value and stopping.")
-            if self.best_non_nan_params is not None:
-                # Revert to the best known good state
-                xk[:] = self.best_non_nan_params
-                print(f"Reverted to best non-NaN params: {self.best_non_nan_params}")
-            return True  # Terminate the optimization
-        
-        # Update the best non-NaN convergence and parameters
-        if convergence < self.best_non_nan_convergence:
-            self.best_non_nan_convergence = convergence
-            self.best_non_nan_params = xk.copy()
-            print(f"New best non-NaN convergence: {self.best_non_nan_convergence}, params: {self.best_non_nan_params}")
-        
-        # Check for consecutive increases in convergence
-        if self.last_convergence is not None and convergence > self.last_convergence:
-            self.consecutive_increases += 1
+    def __call__(self, xk, *args):
+        # Get current function value
+        if len(args) > 0 and hasattr(args[0], 'fun'):
+            f_val = args[0].fun
         else:
-            self.consecutive_increases = 0
-        
-        self.last_convergence = convergence
-        
-        if self.consecutive_increases >= 3:
-            print("Terminating early due to consecutive increases in convergence.")
-            return True  # Terminate the optimization
-
-        return False  # Continue the optimization
-
-
+            return False
+            
+        # Time-based termination
+        if time.time() - self.start_time > self.max_time:
+            if self.best_params is not None:
+                xk[:] = self.best_params
+            return True
+            
+        # Track best solution
+        if f_val < self.best_value - self.tolerance:
+            self.best_value = f_val
+            self.best_params = np.copy(xk)
+            self.iterations_without_improvement = 0
+        else:
+            self.iterations_without_improvement += 1
+            
+        # Terminate if no improvement for a while
+        if self.iterations_without_improvement >= 5:
+            if self.best_params is not None:
+                xk[:] = self.best_params
+            return True
+            
+        return False
 
 def Bezier(control_points, t):
     """Compute a point on a Bézier curve defined by control points at parameter t."""
