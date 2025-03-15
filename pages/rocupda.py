@@ -859,7 +859,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         # print(f'bounds: {bounds}')
         compute_start = time.time()
         # Optimize the weights for fitting - this is a highly intensive calculation
-        result = minimize(error_function, initial_weights, args=(control_points, empirical_points), 
+        result = minimize(error_function_optimized, initial_weights, args=(control_points, empirical_points), 
                          method='SLSQP', bounds=bounds)
         compute_end = time.time()
         print(f"Minimize computation: {compute_end - compute_start:.4f} seconds")

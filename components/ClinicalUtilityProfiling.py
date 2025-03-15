@@ -86,93 +86,125 @@ def pLpStarpUThresholds(sens, spec, uTN, uTP, uFN, uFP, u):
         
     Returns: 
         a list of three thresholds (pL, pStar, and pU): [pL, pStar, pU]
+    """
+    # Convert to numpy arrays with single element for vectorized function
+    sens_array = np.array([sens])
+    spec_array = np.array([spec])
+    
+    pL_array, pStar_array, pU_array = pLpStarpUThresholds_vectorized(sens_array, spec_array, uTN, uTP, uFN, uFP, u)
+    
+    return [float(pL_array[0]), float(pStar_array[0]), float(pU_array[0])]
+
+def pLpStarpUThresholds_vectorized(sens, spec, uTN, uTP, uFN, uFP, u):
+    """
+    Identifies the three thresholds formed by the three utility lines
+    
+    Args: 
+        sens (float): sensitivity of the test
+        spec (float): specificity of the test
+        uTN (float): utility of true negative
+        uTP (float): utility of true positive
+        uFN (float): utility of false negative
+        uFP (float): utility of false positive
+        u: utility of the test itself
+        
+    Returns: 
+        a list of three thresholds (pL, pStar, and pU): [pL, pStar, pU]
     
     """
-    #initate a variable called x (prior)
-    x = sy.symbols('x')
+    # For pU (treatAll = test)
+    A_pU = sens * uTP + (1 - sens) * uFN - (1 - spec) * uFP - spec * uTN - u - uFP
+    B_pU = uTP - uFP
+    pU_array = A_pU / B_pU
     
-    #solve for upper threshold formed by test and treat all
-    pU = sy.solve(treatAll(x, uFP, uTP) - test(x, sens, spec, uTN, uTP, uFN, uFP, u), x)
+    # For pStar (treatAll = treatNone)
+    pStar_array = np.full_like(sens, (uTN - uFP) / (uTP - uFP + uTN - uFN))
     
-    #solve for treatment threshold formed by treat all and treat none
-    pStar = sy.solve(treatAll(x, uFP, uTP) - treatNone(x, uFN, uTN), x)
+    # For pL (treatNone = test)
+    A_pL = sens * uTP + (1 - sens) * uFN - (1 - spec) * uFP - spec * uTN - u - uTN
+    B_pL = uFN - uTN
+    pL_array = A_pL / B_pL
     
-    #solve for lower threshold formed by treat none and test
-    pL = sy.solve(treatNone(x, uFN, uTN) - test(x, sens, spec, uTN, uTP, uFN, uFP, u), x)
+    # Apply bounds
+    pU_array = np.where(np.isnan(pU_array) | np.isinf(pU_array), -999, pU_array)
+    pU_array = np.where(pU_array > 1, 1, pU_array)
+    pU_array = np.where((pU_array < 0) & (pU_array != -999), 0, pU_array)
     
-    #placeholder values when there are not two thresholds formed
-    pU = -999 if (len(pU) == 0) else float(pU[0])
-    pU = 1 if (pU > 1) else pU
-    pU = 0 if ((pU < 0) & (pU != -999)) else pU
-    pStar = -999 if (len(pStar) == 0) else float(pStar[0])
-    pStar = 1 if (pStar > 1) else pStar
-    pStar = 0 if ((pStar < 0) & (pStar != -999)) else pStar
-    pL = -999 if (len(pL) == 0) else float(pL[0])
-    pL = 1 if (pL > 1) else pL
-    pL = 0 if ((pL < 0) & (pL != -999)) else pL
-
-    return [pL, pStar, pU]
+    pStar_array = np.where(np.isnan(pStar_array) | np.isinf(pStar_array), -999, pStar_array)
+    pStar_array = np.where(pStar_array > 1, 1, pStar_array)
+    pStar_array = np.where((pStar_array < 0) & (pStar_array != -999), 0, pStar_array)
+    
+    pL_array = np.where(np.isnan(pL_array) | np.isinf(pL_array), -999, pL_array)
+    pL_array = np.where(pL_array > 1, 1, pL_array)
+    pL_array = np.where((pL_array < 0) & (pL_array != -999), 0, pL_array)
+    
+    return pL_array, pStar_array, pU_array
 
 # Helper function for processing a chunk of TPR/FPR arrays
-def process_roc_chunk(tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u):
-    pLs = []
-    pStars = []
-    pUs = []
-    for tpr, fpr in zip(tpr_chunk, fpr_chunk):
-        pL, pStar, pU = pLpStarpUThresholds(tpr, 1 - fpr, uTN, uTP, uFN, uFP, u)
-        pLs.append(pL)
-        pStars.append(pStar)
-        pUs.append(pU)
-    return pLs, pStars, pUs
+def process_roc_chunk_vectorized(tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u):
+    """
+    Vectorized processing of ROC chunks
+    
+    Args:
+        tpr_chunk (array-like): Chunk of TPR values
+        fpr_chunk (array-like): Chunk of FPR values
+        uTN, uTP, uFN, uFP, u: Utility parameters
+        
+    Returns:
+        Lists of pL, pStar, and pU values
+    """
+    tpr_array = np.array(tpr_chunk)
+    fpr_array = np.array(fpr_chunk)
+    spec_array = 1 - fpr_array
+    
+    pL_array, pStar_array, pU_array = pLpStarpUThresholds_vectorized(tpr_array, spec_array, uTN, uTP, uFN, uFP, u)
+    
+    return pL_array.tolist(), pStar_array.tolist(), pU_array.tolist()
 
-# Parallelized main function
+# Parallelized main function with improved array handling
 def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB, num_workers=4):
-    pLs = []
-    pStars = []
-    pUs = []
-
-    # Extract tpr and fpr arrays from modelChosen
-    if type(np.array(modelChosen['tpr'])) == list:
-        tprArray = np.array(np.array(modelChosen['tpr'])[0])
-        fprArray = np.array(np.array(modelChosen['fpr'])[0])
-    elif type(np.array(modelChosen['tpr'])[0]) == list:
-        tprArray = np.array(np.array(modelChosen['tpr'])[0])
-        fprArray = np.array(np.array(modelChosen['fpr'])[0])
-    elif np.array(modelChosen['tpr']).size > 1:
+    # Extract tpr and fpr arrays from modelChosen - vectorized approach
+    if isinstance(modelChosen['tpr'], list) and len(modelChosen['tpr']) > 0:
+        if isinstance(modelChosen['tpr'][0], list):
+            tprArray = np.array(modelChosen['tpr'][0])
+            fprArray = np.array(modelChosen['fpr'][0])
+        else:
+            tprArray = np.array(modelChosen['tpr'])
+            fprArray = np.array(modelChosen['fpr'])
+    else:
         tprArray = np.array(modelChosen['tpr'])
         fprArray = np.array(modelChosen['fpr'])
-    else:
-        tprArray = np.array(modelChosen['tpr'])[0]
-        fprArray = np.array(modelChosen['fpr'])[0]
+        if tprArray.ndim > 1:
+            tprArray = tprArray[0]
+            fprArray = fprArray[0]
 
     # Ensure arrays are not empty
     if tprArray.size <= 1:
         return [[0], [0], [0]]
 
     # Define chunk size based on num_workers
-    chunk_size = len(tprArray) // num_workers
-    results = []
-
-    # Parallel processing with indices to preserve order
+    chunk_size = max(1, len(tprArray) // num_workers)
+    
+    # Create chunks for parallel processing
+    tpr_chunks = [tprArray[i:i+chunk_size] for i in range(0, len(tprArray), chunk_size)]
+    fpr_chunks = [fprArray[i:i+chunk_size] for i in range(0, len(fprArray), chunk_size)]
+    
+    # Process in parallel
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-        futures = {
-            executor.submit(process_roc_chunk, tprArray[i*chunk_size:(i+1)*chunk_size if i < num_workers - 1 else len(tprArray)], 
-                            fprArray[i*chunk_size:(i+1)*chunk_size if i < num_workers - 1 else len(fprArray)], 
-                            uTN, uTP, uFN, uFP, u): i for i in range(num_workers)
-        }
-
-        for future in concurrent.futures.as_completed(futures):
-            chunk_index = futures[future]  # Retrieve chunk index
-            chunk_pLs, chunk_pStars, chunk_pUs = future.result()
-            results.append((chunk_index, chunk_pLs, chunk_pStars, chunk_pUs))
-
-    # Sort results by chunk index to preserve order
-    results.sort(key=lambda x: x[0])
-    for _, chunk_pLs, chunk_pStars, chunk_pUs in results:
+        results = list(executor.map(
+            lambda args: process_roc_chunk_vectorized(*args),
+            [(tpr, fpr, uTN, uTP, uFN, uFP, u) for tpr, fpr in zip(tpr_chunks, fpr_chunks)]
+        ))
+    
+    # Combine results
+    pLs = []
+    pStars = []
+    pUs = []
+    for chunk_pLs, chunk_pStars, chunk_pUs in results:
         pLs.extend(chunk_pLs)
         pStars.extend(chunk_pStars)
         pUs.extend(chunk_pUs)
-
+    
     return [pLs, pStars, pUs]
     
 def priorFiller(priorList, lower: bool):
@@ -185,107 +217,137 @@ def priorFiller(priorList, lower: bool):
         
     Returns: 
         A modified list of priors that fills in the "NA"(-999) values at the head and tail of the list
-    
     """
-    if(lower == True):
-        for index, item in enumerate(priorList):
-            lenList = len(priorList)
-            midPoint = lenList/2
-            if((index < midPoint) & (lenList > 1)):
-                if(item == -999):
-                    priorList[index] = 1
-            if((index > midPoint) & (lenList > 1)):
-                if(item == -999):
-                    priorList[index] = 0
+    priorArray = np.array(priorList)
+    lenList = len(priorArray)
+    midPoint = lenList / 2
+    
+    # Create an index array for the positions
+    indices = np.arange(lenList)
+    
+    if lower:
+        # For lower thresholds
+        mask_first_half = (indices < midPoint) & (priorArray == -999)
+        mask_second_half = (indices >= midPoint) & (priorArray == -999)
+        
+        priorArray[mask_first_half] = 1
+        priorArray[mask_second_half] = 0
     else:
-        for index, item in enumerate(priorList):
-            lenList = len(priorList)
-            midPoint = lenList/2
-            if((index < midPoint) & (lenList > 1)):
-                if(item == -999):
-                    priorList[index] = 0
-            if((index > midPoint) & (lenList > 1)):
-                if(item == -999):
-                    priorList[index] = 0
-    return priorList
-                    
+        # For upper thresholds
+        mask_first_half = (indices < midPoint) & (priorArray == -999)
+        mask_second_half = (indices >= midPoint) & (priorArray == -999)
+        
+        priorArray[mask_first_half] = 0
+        priorArray[mask_second_half] = 0
+    
+    return priorArray.tolist()
+
 def priorModifier(priorList):
     """
     The previous prior filler function did not take care of all the problems. 
-    This function provides additional modifications. 
-        - for example, "1, 0, 1" the 0 should be a 1. 
-        - another example, "0, 0, 1, 0" the 1 should be a 0.
-    Will refine and merge the two functions in the future
+    This function provides additional modifications.
     
     Args: 
         priorList (list): list of lower or upper thresholds (priors)
         
     Returns: 
         A modified list of priors
-    
     """
-    for index, item in enumerate(priorList):
-        lenList = len(priorList)
-        midPoint = lenList/2
-        if((index < midPoint) & (lenList > 1)):
-            if((item == 1) & (priorList[index + 2] > priorList[index + 1]) & (priorList[index + 3] > priorList[index + 2])):
-                priorList[index] = 0
-            elif((item == 0) & (priorList[index + 2] < priorList[index + 1]) & (priorList[index + 3] < priorList[index + 2])):
-                priorList[index] = 1
-        if((index > midPoint) & (lenList > 1)):
-            if((item == 1) & (priorList[index - 2] > priorList[index - 1]) & (priorList[index - 3] > priorList[index - 2])):
-                priorList[index] = 0
-            elif((item == 0) & (priorList[index - 2] < priorList[index - 1]) & (priorList[index - 3] < priorList[index - 2])):
-                priorList[index] = 1
-        if(index == lenList -1):
-            if((priorList[index - 1] != 0) & (priorList[index] == 0)):
-                priorList[index] = priorList[index - 1]
-    return priorList
+    priorArray = np.array(priorList)
+    lenList = len(priorArray)
+    midPoint = lenList / 2
+    
+    # Create modified arrays for easier conditions checking
+    shifted_plus_1 = np.roll(priorArray, -1)
+    shifted_plus_2 = np.roll(priorArray, -2)
+    shifted_plus_3 = np.roll(priorArray, -3)
+    
+    shifted_minus_1 = np.roll(priorArray, 1)
+    shifted_minus_2 = np.roll(priorArray, 2)
+    shifted_minus_3 = np.roll(priorArray, 3)
+    
+    # Indices for first half
+    first_half = np.arange(lenList) < midPoint
+    
+    # Conditions for first half
+    cond1 = (priorArray == 1) & (shifted_plus_2 > shifted_plus_1) & (shifted_plus_3 > shifted_plus_2) & first_half
+    cond2 = (priorArray == 0) & (shifted_plus_2 < shifted_plus_1) & (shifted_plus_3 < shifted_plus_2) & first_half
+    
+    # Apply conditions for first half
+    priorArray[cond1] = 0
+    priorArray[cond2] = 1
+    
+    # Indices for second half
+    second_half = np.arange(lenList) >= midPoint
+    
+    # Conditions for second half
+    cond3 = (priorArray == 1) & (shifted_minus_2 > shifted_minus_1) & (shifted_minus_3 > shifted_minus_2) & second_half
+    cond4 = (priorArray == 0) & (shifted_minus_2 < shifted_minus_1) & (shifted_minus_3 < shifted_minus_2) & second_half
+    
+    # Apply conditions for second half
+    priorArray[cond3] = 0
+    priorArray[cond4] = 1
+    
+    # Special condition for last element
+    if lenList > 1 and priorArray[-1] == 0 and priorArray[-2] != 0:
+        priorArray[-1] = priorArray[-2]
+    
+    return priorArray.tolist()
 
 def extractThresholds(row):
     """
     Based on https://github.com/scikit-learn/scikit-learn/issues/3097, by default 1 is added to the last number to 
-    compute the entire ROC curve. Thus, this extracts the thresholds and adjusts those outside the [0,1] range. 
+    Extracts and adjusts the thresholds to ensure they are within the [0,1] range.
     
     Args:
-        row (list): a row in the dataframe with the column "thresholds" obtained from the model
+        row (dict): a dictionary with the key "thresholds" from the model
         
     Returns: 
         a modified list of thresholds. 
     """
     thresholds = row['thresholds']
     if thresholds is not None:
-        for i, cutoff in enumerate(thresholds):
-            if(cutoff > 1):
-                thresholds[i] = 1
-        return thresholds
+        # Vectorized approach to cap thresholds at 1
+        thresholds = np.array(thresholds)
+        thresholds = np.where(thresholds > 1, 1, thresholds)
+        return thresholds.tolist()
     else:
         return None
+    
 
 def adjustpLpUClassificationThreshold(thresholds, pLs, pUs):
     """
     Modifies the prior thresholds as well as the predicted probability cutoff thresholds 
     
     Args:
-        thresholds (list): a row in the dataframe with the column "thresholds" obtained from the model
+        thresholds (list): thresholds obtained from the model
+        pLs (list): lower thresholds
+        pUs (list): upper thresholds
         
     Returns: 
-        a modified list of thresholds. 
+        a list containing modified thresholds, pLs, and pUs
     """
-    pLs = priorFiller(pLs, True)
-    pLs = priorModifier(pLs)
-    pUs = priorFiller(pUs, False)
-    pUs = priorModifier(pUs)
+    # Convert inputs to numpy arrays for vectorized operations
     thresholds = np.array(thresholds)
+    pLs = np.array(priorFiller(pLs, True))
+    pLs = np.array(priorModifier(pLs.tolist()))
+    pUs = np.array(priorFiller(pUs, False))
+    pUs = np.array(priorModifier(pUs.tolist()))
+    
+    # Adjust thresholds
     thresholds = np.where(thresholds > 1, 1, thresholds)
+    
+    # Check if last threshold is 0 and adjust accordingly
     if thresholds[-1] == 0:
-        thresholds[-1] == 0.0001
+        thresholds[-1] = 0.0001
         thresholds = np.append(thresholds, 0)
-        pLs[0] = pLs[1]
-        pUs[0] = pUs[1]
-        pLs = np.append([0], pLs)
-        pUs = np.append([0], pUs)
-    # thresholds = thresholds[::-1]
+        
+        # Adjust pLs and pUs
+        pLs = np.append(np.array([0]), pLs)
+        pUs = np.append(np.array([0]), pUs)
+        pLs[1] = pLs[2]  # Adjust second element based on third
+        pUs[1] = pUs[2]  # Adjust second element based on third
+    
     return [thresholds, pLs, pUs]
 
 def eqLine(x, x0, x1, y0, y1):
@@ -302,64 +364,124 @@ def eqLine(x, x0, x1, y0, y1):
     Returns: 
         f(x)
     """
-    if (x1 - x0) == 0:
-        slope = (y1 - y0) / (x1 - x0 + 0.000001)
-    else:
-        slope = (y1 - y0) / (x1 - x0)
+    # Calculate slope with safeguard against division by zero
+    denominator = (x1 - x0)
+    if denominator == 0:
+        denominator = 0.000001
+    
+    slope = (y1 - y0) / denominator
     y = slope * (x - x0) + y0
     return y
 
 # Function to calculate area for a chunk
-def calculate_area_chunk(start, end, pLs, pUs, thresholds):
+def calculate_area_chunk_optimized(start, end, pLs, pUs, thresholds):
+    """
+    Optimized version of calculate_area_chunk using vectorized operations
+    
+    Args:
+        start (int): Start index
+        end (int): End index
+        pLs (list): Lower thresholds
+        pUs (list): Upper thresholds
+        thresholds (list): Classification thresholds
+        
+    Returns:
+        tuple: (area, largest range prior, index of largest range prior)
+    """
     area = 0
     largestRangePrior = 0
     largestRangePriorThresholdIndex = -999
     
-    for i in range(start, end):
-        if i < len(pLs) - 1:
-            if pLs[i] < pUs[i] and pLs[i + 1] < pUs[i + 1]:
-                rangePrior = pUs[i] - pLs[i]
-                if rangePrior > largestRangePrior:
-                    largestRangePrior = rangePrior
-                    largestRangePriorThresholdIndex = i
+    # Convert to numpy arrays for vectorized operations
+    pLs = np.array(pLs[start:end+1])
+    pUs = np.array(pUs[start:end+1])
+    thresholds = np.array(thresholds[start:end+1])
+    
+    # Calculate range of priors
+    rangesPrior = pUs - pLs
+    
+    # Find largest range prior and its index
+    if len(rangesPrior) > 0:
+        validRanges = (pLs < pUs)
+        if np.any(validRanges):
+            valid_ranges = rangesPrior[validRanges]
+            if len(valid_ranges) > 0:
+                max_idx = np.argmax(valid_ranges)
+                largestRangePrior = valid_ranges[max_idx]
+                # Get the original index
+                valid_indices = np.where(validRanges)[0]
+                if len(valid_indices) > max_idx:
+                    largestRangePriorThresholdIndex = start + valid_indices[max_idx]
+    
+    # Calculate areas for each segment
+    for i in range(len(pLs) - 1):
+        # Case 1: Both endpoints have pL < pU
+        if pLs[i] < pUs[i] and pLs[i+1] < pUs[i+1]:
+            rangePrior = pUs[i] - pLs[i]
+            rangePriorNext = pUs[i+1] - pLs[i+1]
+            avgRangePrior = (rangePrior + rangePriorNext) / 2
+            area += abs(avgRangePrior) * abs(thresholds[i+1] - thresholds[i])
+        
+        # Case 2: Intersection where pL > pU at first point, pL < pU at second point
+        elif pLs[i] > pUs[i] and pLs[i+1] < pUs[i+1]:
+            x0 = thresholds[i]
+            x1 = thresholds[i+1]
+            if x0 != x1:
+                pL0, pL1 = pLs[i], pLs[i+1]
+                pU0, pU1 = pUs[i], pUs[i+1]
                 
-                avgRangePrior = (rangePrior + (pUs[i + 1] - pLs[i + 1])) / 2
-                area += abs(avgRangePrior) * abs(thresholds[i + 1] - thresholds[i])
-
-            elif pLs[i] > pUs[i] and pLs[i + 1] < pUs[i + 1]:
-                x0 = thresholds[i]
-                x1 = thresholds[i + 1]
-                if x0 != x1:
-                    pL0 = pLs[i]
-                    pL1 = pLs[i + 1]
-                    pU0 = pUs[i]
-                    pU1 = pUs[i + 1]
+                # Calculate intersection
+                try:
                     x = sy.symbols('x')
                     xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
-                    yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
-                    avgRangePrior = (0 + (pUs[i + 1] - pLs[i + 1])) / 2
-                    area += abs(avgRangePrior) * abs(thresholds[i + 1] - xIntersect[0])
-
-            elif pLs[i] < pUs[i] and pLs[i + 1] > pUs[i + 1]:
-                x0 = thresholds[i]
-                x1 = thresholds[i + 1]
-                if x0 != x1:
-                    pL0 = pLs[i]
-                    pL1 = pLs[i + 1]
-                    pU0 = pUs[i]
-                    pU1 = pUs[i + 1]
+                    if len(xIntersect) > 0:
+                        xIntersect = float(xIntersect[0])
+                        rangePriorNext = pUs[i+1] - pLs[i+1]
+                        avgRangePrior = rangePriorNext / 2  # Average of 0 and range at next point
+                        area += abs(avgRangePrior) * abs(thresholds[i+1] - xIntersect)
+                except:
+                    # Fallback if symbolic solution fails
+                    pass
+        
+        # Case 3: Intersection where pL < pU at first point, pL > pU at second point
+        elif pLs[i] < pUs[i] and pLs[i+1] > pUs[i+1]:
+            x0 = thresholds[i]
+            x1 = thresholds[i+1]
+            if x0 != x1:
+                pL0, pL1 = pLs[i], pLs[i+1]
+                pU0, pU1 = pUs[i], pUs[i+1]
+                
+                # Calculate intersection
+                try:
                     x = sy.symbols('x')
                     xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
-                    if len(xIntersect) == 0:
-                        xIntersect = [0]
-                    yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
-                    avgRangePrior = (0 + (pUs[i] - pLs[i])) / 2
-                    area += abs(avgRangePrior) * abs(xIntersect[0] - thresholds[i + 1])
+                    if len(xIntersect) > 0:
+                        xIntersect = float(xIntersect[0])
+                        rangePrior = pUs[i] - pLs[i]
+                        avgRangePrior = rangePrior / 2  # Average of range at current point and 0
+                        area += abs(avgRangePrior) * abs(xIntersect - thresholds[i])
+                except:
+                    # Fallback if symbolic solution fails
+                    pass
     
     return area, largestRangePrior, largestRangePriorThresholdIndex
 
 # Parallelized main function
 def applicableArea(modelRow, thresholds, utils, p, HoverB, num_workers=4):
+    """
+    Calculate the applicable area using parallelized processing
+    
+    Args:
+        modelRow (dict): Model data containing TPR and FPR
+        thresholds (list): Classification thresholds
+        utils (tuple): Utility values (uTN, uTP, uFN, uFP, u)
+        p (float): Probability value
+        HoverB (float): Harm over benefit ratio
+        num_workers (int): Number of parallel workers
+        
+    Returns:
+        list: Statistics about the applicable area
+    """
     uTN, uTP, uFN, uFP, u = utils
     area = 0
     largestRangePrior = 0
@@ -368,28 +490,40 @@ def applicableArea(modelRow, thresholds, utils, p, HoverB, num_workers=4):
     priorDistributionArray = []
     leastViable = 1
     
-    pLs, pStars, pUs = modelPriorsOverRoc(modelRow, uTN, uTP, uFN, uFP, u)
-    thresholds = np.where(np.array(thresholds) > 1, 1, thresholds)
+    # Get priors over ROC curve
+    pLs, pStars, pUs = modelPriorsOverRoc(modelRow, uTN, uTP, uFN, uFP, u, HoverB, num_workers=num_workers)
+    
+    # Convert thresholds to numpy array for vectorized operations
+    thresholds = np.array(thresholds)
+    thresholds = np.where(thresholds > 1, 1, thresholds)
+    
+    # Adjust thresholds and priors
     thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
     
-    chunk_size = len(pLs) // num_workers
-    results = []
+    # Divide work for parallel processing
+    chunk_size = max(1, len(pLs) // num_workers)
+    chunk_ranges = [(i * chunk_size, min((i + 1) * chunk_size, len(pLs) - 1)) 
+                    for i in range(num_workers)]
     
+    # Process chunks in parallel
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-        futures = []
-        for i in range(num_workers):
-            start = i * chunk_size
-            end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-            futures.append(executor.submit(calculate_area_chunk, start, end, pLs, pUs, thresholds))
+        future_to_chunk = {
+            executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds): (start, end)
+            for start, end in chunk_ranges
+        }
         
-        for future in concurrent.futures.as_completed(futures):
-            chunk_area, chunk_largest_range, chunk_largest_index = future.result()
+        for future in concurrent.futures.as_completed(future_to_chunk):
+            chunk_area, chunk_largest_range, chunk_largest_idx = future.result()
             area += chunk_area
+            
             if chunk_largest_range > largestRangePrior:
                 largestRangePrior = chunk_largest_range
-                largestRangePriorThresholdIndex = chunk_largest_index
+                largestRangePriorThresholdIndex = chunk_largest_idx
     
-    area = min(np.round(float(area), 3), 1)  # Round and cap area at 1
+    # Round and cap area at 1
+    area = min(np.round(float(area), 3), 1)
+    
+    # Check if probability is within range
     withinRange = (p > 0 and p < largestRangePrior)
     
     return [area, largestRangePriorThresholdIndex, withinRange, leastViable, uFP]
@@ -628,9 +762,10 @@ def filter_points(FPR, TPR):
     
     return np.array(filtered_FPR), np.array(filtered_TPR)
 
-def bernstein_poly(i, n, t):
+def bernstein_poly(i, n, t_values):
     """Compute the Bernstein polynomial B_{i,n} at t."""
-    return math.comb(n, i) * (t**i) * ((1 - t)**(n - i))
+    coef = math.comb(n, i)
+    return coef * t_values**i * (1 - t_values)**(n - i)
 
 
 def rational_bezier_curve(control_points, weights, num_points=100):
@@ -638,21 +773,29 @@ def rational_bezier_curve(control_points, weights, num_points=100):
     n = len(control_points) - 1
     t_values = np.linspace(0, 1, num_points)
     
-    curve_points = []
-    for t in t_values:
-        numerator = np.zeros(2)
-        denominator = 0.0000001
-        for i in range(n + 1):
-            B_i = bernstein_poly(i, n, t)
-            numerator += weights[i] * B_i * np.array(control_points[i])
-            denominator += weights[i] * B_i
-
-        if denominator == 0:
-            print("Warning: Denominator is zero.")
-            continue
-
-        curve_point = numerator / denominator
-        yield curve_point
+    # Preallocate output array
+    curve_points = np.zeros((num_points, 2))
+    
+    # Vectorize Bernstein polynomial computation
+    for i in range(n + 1):
+        B_i = np.array([bernstein_poly(i, n, t) for t in t_values])
+        weighted_B_i = weights[i] * B_i
+        
+        # Add contribution to numerator and denominator
+        numerator_contribution = weighted_B_i[:, np.newaxis] * np.array(control_points[i])
+        curve_points += numerator_contribution
+        
+    # Normalize by the sum of weighted basis functions
+    denominator = np.zeros(num_points)
+    for i in range(n + 1):
+        B_i = np.array([bernstein_poly(i, n, t) for t in t_values])
+        denominator += weights[i] * B_i
+    
+    # Avoid division by zero
+    valid_indices = denominator > 1e-10
+    curve_points[valid_indices] /= denominator[valid_indices, np.newaxis]
+    
+    return curve_points
 
 def perpendicular_distance_for_error(points, curve_points):
     """Compute the perpendicular distance from each point to the curve."""
@@ -660,15 +803,15 @@ def perpendicular_distance_for_error(points, curve_points):
     min_distances = np.min(distances, axis=1)
     return min_distances
 
-def error_function(weights, control_points, empirical_points):
-    """Compute the error between the rational Bezier curve and the empirical points."""
-    curve_points_gen = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 1)
-    curve_points = np.array(list(curve_points_gen))
-
-    # Process or collect the curve points as needed
-    distances = perpendicular_distance_for_error(empirical_points, curve_points)
-    normalized_error = np.sum(distances) / len(empirical_points)
-    return normalized_error
+def error_function_optimized(weights, control_points, empirical_points):
+    """Vectorized computation of error between rational Bezier curve and empirical points."""
+    curve_points = rational_bezier_curve(control_points, weights, num_points=len(empirical_points) * 2)
+    
+    # For each empirical point, find the nearest curve point
+    distances = cdist(empirical_points, curve_points, 'euclidean')
+    min_distances = np.min(distances, axis=1)
+    
+    return np.sum(min_distances) / len(empirical_points)
 
 def compute_slope(points):
     """Compute the slope between consecutive points."""
