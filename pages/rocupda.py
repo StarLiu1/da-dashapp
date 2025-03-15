@@ -824,25 +824,56 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     else:
         roc_plot_group = go.Figure()  
         figure = roc_plot_group
-        figure.update_layout()
-        # Bezier curve
+        # figure.update_layout()
+        
+        # print(f'tpr is {tpr}')
+        # Bezier curve - using Cython-optimized functions for these intensive calculations
+        
+        compute_start = time.time()
+        # Extract the second element from the result of max_relative_slopes
         outer_idx = max_relative_slopes(fpr, tpr)[1]
+        compute_end = time.time()
+        print(f"max relative slopes computation: {compute_end - compute_start:.4f} seconds")
+
+        # print(outer_idx)
+        compute_start = time.time()
         outer_idx = clean_max_relative_slope_index(outer_idx, len(tpr))
+        compute_end = time.time()
+        print(f"clean max: {compute_end - compute_start:.4f} seconds")
+
+        compute_start = time.time()
         u_roc_fpr_fitted, u_roc_tpr_fitted = fpr[outer_idx], tpr[outer_idx]
         u_roc_fpr_fitted, u_roc_tpr_fitted = deduplicate_roc_points(u_roc_fpr_fitted, u_roc_tpr_fitted)
-        
-        # control points from the convex hull
+        compute_end = time.time()
+        print(f"deduplicate: {compute_end - compute_start:.4f} seconds")
+
+        # Control points from the convex hull
         control_points = list(zip(u_roc_fpr_fitted, u_roc_tpr_fitted))
         empirical_points = list(zip(fpr, tpr))
         initial_weights = [1] * len(control_points)
         bounds = [(0, 20) for _ in control_points]
 
-        # optimize the weights for fitting
-        result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
-        optimal_weights = result.x
+        # print(f'control points: {control_points}')
+        # print(f'empiric points: {empirical_points}')
+        # print(f'initial weights: {initial_weights}')
+        # print(f'bounds: {bounds}')
+        compute_start = time.time()
+        # Optimize the weights for fitting - this is a highly intensive calculation
+        result = minimize(error_function, initial_weights, args=(control_points, empirical_points), 
+                         method='SLSQP', bounds=bounds)
+        compute_end = time.time()
+        print(f"Minimize computation: {compute_end - compute_start:.4f} seconds")
 
+        optimal_weights = result.x
+        # print(f'bezier control points:{control_points}')
+        
         curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+        
+        # print(f'bezier curve points:{curve_points_gen}')
         curve_points = np.array(list(curve_points_gen)) 
+        
+        
+        print(f"Bezier curve computation: {compute_end - compute_start:.4f} seconds")
 
         # save results 
         previous_values['predictions'] = predictions
@@ -924,10 +955,14 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
             previous_values['cutoff_optimal_pt'] = cutoff_optimal_pt
 
             predictions = np.array(predictions)
-
-            tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
-            fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
-            
+            if np.sum(true_labels == 1) == 0:
+                tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / 1
+            else:
+                tpr_value = np.sum((true_labels == 1) & (predictions >= slider_cutoff)) / np.sum(true_labels == 1)
+            if np.sum(true_labels == 0) == 0:
+                fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / 1
+            else:
+                fpr_value = np.sum((true_labels == 0) & (predictions >= slider_cutoff)) / np.sum(true_labels == 0)
             previous_values['tpr_cut'] = tpr_value
             previous_values['fpr_cut'] = fpr_value
             

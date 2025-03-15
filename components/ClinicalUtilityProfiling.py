@@ -113,62 +113,6 @@ def pLpStarpUThresholds(sens, spec, uTN, uTP, uFN, uFP, u):
 
     return [pL, pStar, pU]
 
-# def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB):
-#     """
-#     Collects all the lower, pStar, and upper thresholds for every point on the ROC curve
-    
-#     Args: 
-#         modelChosen (model): chosen ml model
-#         uTN (float): utility of true negative
-#         uTP (float): utility of true positive
-#         uFN (float): utility of false negative
-#         uFP (float): utility of false positive
-#         u: utility of the test itself
-        
-#     Returns: 
-#         a list of lists of thresholds (pL, pStar, and pU): [[pL], [pStar], [pU]]
-    
-#     """
-#     pLs = []
-#     pStars = []
-#     pUs = []
-    
-#     # uFP = uTN - (uTP - uFN) * HoverB
-
-#     # get TPRs and FPRs from the model
-#     if(type(np.array(modelChosen['tpr'])) == list):
-#         tprArray = np.array(np.array(modelChosen['tpr'])[0])
-#         fprArray = np.array(np.array(modelChosen['fpr'])[0])
-#     elif type(np.array(modelChosen['tpr'])[0]) == list:
-#         tprArray = np.array(np.array(modelChosen['tpr'])[0])
-#         fprArray = np.array(np.array(modelChosen['fpr'])[0])
-#     elif (np.array(modelChosen['tpr'])).size > 1:
-#         tprArray = np.array(modelChosen['tpr'])
-#         fprArray = np.array(modelChosen['fpr'])
-#     else:
-#         tprArray = np.array(modelChosen['tpr'])[0]
-#         fprArray = np.array(modelChosen['fpr'])[0]
-        
-#     #for each pair of tpr, fpr
-#     if(tprArray.size > 1):
-#         for cutoffIndex in range(0, tprArray.size):
-            
-#             #assign tpr and fpr
-#             tpr = tprArray[cutoffIndex]
-#             fpr = fprArray[cutoffIndex]
-            
-#             #find pL, pStar, and pU thresholds
-#             pL, pStar, pU = pLpStarpUThresholds(tpr, 1 - fpr, uTN, uTP, uFN, uFP, u)
-            
-#             #append results
-#             pLs.append(pL)
-#             pStars.append(pStar)
-#             pUs.append(pU)
-            
-#         return [pLs, pStars, pUs]
-#     else:
-#         return [[0], [0], [0]]
-
 # Helper function for processing a chunk of TPR/FPR arrays
 def process_roc_chunk(tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u):
     pLs = []
@@ -358,138 +302,12 @@ def eqLine(x, x0, x1, y0, y1):
     Returns: 
         f(x)
     """
-    slope = (y1 - y0) / (x1 - x0)
+    if (x1 - x0) == 0:
+        slope = (y1 - y0) / (x1 - x0 + 0.000001)
+    else:
+        slope = (y1 - y0) / (x1 - x0)
     y = slope * (x - x0) + y0
     return y
-
-# def applicableArea(modelRow, thresholds, utils, p, HoverB):
-#     """
-#     Find the applicability area (ApAr) of the model. 
-#     Interpretation of the result: ranges of prior probability in the target population for which the model has value (utility)
-#     over the alternatives of treat all and treat none. ApAr is calculated by integrating the range of applicable prior over
-#     the entired ROC. 
-    
-#     Args:
-#         modelRow (row of a dataframe): a row of the dataframe with the model parameters and results:
-#             - asymmetric cost
-#             - TPRs
-#             - FPRs
-#             - predicted probability cutoff thresholds
-#             - utilities
-#                 - uTN > uTP > uFP > uFN
-#                 - uFN should be 0 or has the least utility
-#                 - uTN should be 1 or has the highest utility
-#                 - uTP should have the second highest utility
-#                 - uFP should have the third highest utility
-#         thresholds (list): list of thresholds used for classifying the predicted probabilities
-#         utils (list): list of utility parameters
-#             - utilities of true negative, true positive, false negative, false positive, and the uility of the test itself
-#         p (float): the specific prior probability of interest. See if the specified prior fits in the range of applicable priors
-        
-#     Returns: 
-#         a list of 5 results
-#             area (float): the ApAr value
-#             largestRangePriorThresholdIndex (int): index of the threshold that gives us the largest range of applicable priors
-#             withinRange (bool): a boolean indicating if the specified prior of interest falls within the range of the model
-#             leastViable (float): minimum applicable prior for the target population
-#             uFP (float): returns the uFP 
-#     """
-#     uTN, uTP, uFN, uFP, u = utils
-#     area = 0
-#     largestRangePrior = 0
-#     largestRangePriorThresholdIndex = -999
-#     withinRange = False
-#     priorDistributionArray = []
-#     leastViable = 1
-#     minPrior = 0
-#     maxPrior = 0
-#     meanPrior = 0
-    
-#     #calculate pLs, pStars, and pUs
-# #     uFP = uTN - (uTP - uFN) * (1 / modelRow['costRatio'])
-# #     HoverB = (1 / costRatio)
-#     # uFP = uTN - (uTP - uFN) * HoverB
-#     pLs, pStars, pUs = modelPriorsOverRoc(modelRow, uTN, uTP, uFN, uFP, u)
-    
-#     #modify the classification thresholds
-#     thresholds = np.array(thresholds)
-#     thresholds = np.where(thresholds > 1, 1, thresholds)
-#     thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
-    
-#     #calculate applicability area
-#     for i, prior in enumerate(pLs):
-#         if i < len(pLs) - 1:
-#             if pLs[i] < pUs[i] and pLs[i + 1] < pUs[i + 1]:
-                
-#                 #find the range of priors
-#                 rangePrior = pUs[i] - pLs[i]
-                
-#                 #check if it is the largest range of priors
-#                 if rangePrior > largestRangePrior:
-#                     largestRangePrior = rangePrior
-#                     largestRangePriorThresholdIndex = i
-                    
-#                 # trapezoidal rule (upper + lower base)/2
-#                 avgRangePrior = (rangePrior + (pUs[i + 1] - pLs[i + 1])) / 2 
-                
-#                 #accumulate areas
-#                 area += abs(avgRangePrior) * abs(thresholds[i + 1] - thresholds[i])
-                
-#             #where pL and pU cross into pU > pL
-#             elif pLs[i] > pUs[i] and pLs[i + 1] < pUs[i + 1]:                
-#                 x0 = thresholds[i]
-#                 x1 = thresholds[i+1]
-#                 if x0 != x1:
-#                     pL0 = pLs[i]
-#                     pL1 = pLs[i+1]
-#                     pU0 = pUs[i]
-#                     pU1 = pUs[i+1]
-#                     x = sy.symbols('x')
-                    
-#                     #solve for x and y at the intersection
-#                     xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
-#                     yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
-                    
-#                     # trapezoidal rule (upper + lower base)/2
-#                     avgRangePrior = (0 + (pUs[i + 1] - pLs[i + 1])) / 2
-                    
-#                     #accumulate areas
-#                     area += abs(avgRangePrior) * abs(thresholds[i + 1] - xIntersect[0])
-                
-#             elif (pLs[i] < pUs[i] and pLs[i + 1] > pUs[i + 1]):
-#                 x0 = thresholds[i]
-#                 x1 = thresholds[i+1]
-#                 if x0 != x1:
-#                     pL0 = pLs[i]
-#                     pL1 = pLs[i+1]
-#                     pU0 = pUs[i]
-#                     pU1 = pUs[i+1]
-#                     x = sy.symbols('x')
-                    
-#                     #solve for x and y at the intersection
-#                     xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
-                    
-#                     if len(xIntersect) == 0:
-#                         xIntersect = [0]
-                        
-#                     yIntersect = eqLine(xIntersect[0], x0, x1, pL0, pL1)
-                    
-#                     #accumulate areas
-#                     avgRangePrior = (0 + (pUs[i] - pLs[i])) / 2 # trapezoidal rule (upper + lower base)/2
-#                     area += abs(avgRangePrior) * abs(xIntersect[0] - thresholds[i + 1])
-                
-#     #round the calculation
-#     area = np.round(float(area), 3)
-    
-#     #due to minor calculation inaccuracies in the previous iterations of the function. This should no longer apply. All ApAr 
-#     #should be less than 1
-#     if(area > 1):
-#         area = 1           
-#     #check if the specified prior is within the ranges of priors
-#     if((p > minPrior) & (p < maxPrior)):
-#         withinRange = True
-                
-#     return [area, largestRangePriorThresholdIndex, withinRange, leastViable, uFP]
 
 # Function to calculate area for a chunk
 def calculate_area_chunk(start, end, pLs, pUs, thresholds):
@@ -598,8 +416,6 @@ def pLpUThresholds(sens, spec, uTN, uTP, uFN, uFP, u):
     """
     #initate a variable called x (prior)
     x = sy.symbols('x')
-    
-#     print(u)
     
     #solve for upper threshold formed by test and treat all
     pU = sy.solve(treatAll(x, uFP, uTP) - test(x, sens, spec, uTN, uTP, uFN, uFP, u), x)
@@ -816,7 +632,6 @@ def bernstein_poly(i, n, t):
     """Compute the Bernstein polynomial B_{i,n} at t."""
     return math.comb(n, i) * (t**i) * ((1 - t)**(n - i))
 
-# 
 
 def rational_bezier_curve(control_points, weights, num_points=100):
     """Compute the rational Bezier curve with given control points and weights."""
@@ -826,7 +641,7 @@ def rational_bezier_curve(control_points, weights, num_points=100):
     curve_points = []
     for t in t_values:
         numerator = np.zeros(2)
-        denominator = 0
+        denominator = 0.0000001
         for i in range(n + 1):
             B_i = bernstein_poly(i, n, t)
             numerator += weights[i] * B_i * np.array(control_points[i])
@@ -838,10 +653,6 @@ def rational_bezier_curve(control_points, weights, num_points=100):
 
         curve_point = numerator / denominator
         yield curve_point
-    #     curve_points.append(curve_point)
-    
-    # return np.array(curve_points)
-
 
 def perpendicular_distance_for_error(points, curve_points):
     """Compute the perpendicular distance from each point to the curve."""
