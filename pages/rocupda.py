@@ -16,7 +16,7 @@ import plotly.io as pio
 import base64
 from weasyprint import HTML
 import io
-from scipy.special import comb
+from scipy.special import comb 
 from components.report import create_pdf_report, create_roc_plot
 
 from app import app
