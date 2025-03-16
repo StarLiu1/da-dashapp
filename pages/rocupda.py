@@ -17,7 +17,7 @@ import base64
 from weasyprint import HTML
 import io
 from scipy.special import comb 
-from components.report import create_pdf_report, create_roc_plot
+from components.report import create_pdf_report_reportlab, create_roc_plot
 
 from app import app
 
@@ -596,7 +596,7 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
         binormal_fig = go.Figure(binormal_dict)
         
         # Generate the PDF report with the dynamic figure
-        pdf_io = create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict)
+        pdf_io = create_pdf_report_reportlab(roc_fig, utility_fig, binormal_fig, parameters_dict)
         
         # Send the generated PDF as a downloadable file and reset the click counter
         return dcc.send_bytes(pdf_io.read(), "report.pdf"), 0
@@ -1931,7 +1931,7 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
         binormal_fig = go.Figure(binormal_dict)
         
         # Generate the PDF report with the dynamic figure
-        pdf_io = create_pdf_report(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_fig)
+        pdf_io = create_pdf_report_reportlab(roc_fig, utility_fig, binormal_fig, parameters_dict, apar_fig)
         
         # Send the generated PDF as a downloadable file and reset the click counter
         return dcc.send_bytes(pdf_io.read(), "report_with_apar.pdf"), 0

@@ -957,7 +957,7 @@ def optimize_bezier_fast(control_points, empirical_points, initial_weights=None,
         initial_weights = np.asarray(initial_weights)
         
     # Set bounds (weights should be positive)
-    bounds = [(0.1, 10.0) for _ in range(n_controls)]
+    bounds = [(0.1, 20.0) for _ in range(n_controls)]
     
     # Create early termination callback
     callback = SimpleEarlyTermination(max_time=max_time)
