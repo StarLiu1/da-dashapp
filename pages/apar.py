@@ -596,10 +596,10 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             initial_weights = [1] * len(control_points)
             bounds = [(0, 20) for _ in control_points]
 
-            result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
+            result = minimize(error_function_simple, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
             optimal_weights = result.x
 
-            curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+            curve_points_gen = rational_bezier_curve_optimized(control_points, optimal_weights, num_points=len(empirical_points))
             curve_points = np.array(list(curve_points_gen)) 
             previous_values_2['curve_fpr'] = curve_points[:,0]
             previous_values_2['curve_tpr'] = curve_points[:,1]
@@ -635,10 +635,10 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             initial_weights = [1] * len(control_points)
             bounds = [(0, 20) for _ in control_points]
 
-            result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
+            result = minimize(error_function_simple, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
             optimal_weights = result.x
 
-            curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+            curve_points_gen = rational_bezier_curve_optimized(control_points, optimal_weights, num_points=len(empirical_points))
             curve_points = np.array(list(curve_points_gen)) 
             previous_values_2['curve_fpr'] = curve_points[:,0]
             previous_values_2['curve_tpr'] = curve_points[:,1]
@@ -691,10 +691,10 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
         initial_weights = [1] * len(control_points)
         bounds = [(0, 20) for _ in control_points]
 
-        result = minimize(error_function, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
+        result = minimize(error_function_simple, initial_weights, args=(control_points, empirical_points), method='SLSQP', bounds=bounds)
         optimal_weights = result.x
 
-        curve_points_gen = rational_bezier_curve(control_points, optimal_weights, num_points=len(empirical_points))
+        curve_points_gen = rational_bezier_curve_optimized(control_points, optimal_weights, num_points=len(empirical_points))
         curve_points = np.array(list(curve_points_gen)) 
         previous_values_2['curve_fpr'] = curve_points[:,0]
         previous_values_2['curve_tpr'] = curve_points[:,1]
@@ -861,7 +861,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             for i in range(num_workers):
                 start = i * chunk_size
                 end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-                futures.append(executor.submit(calculate_area_chunk, start, end, pLs, pUs, thresholds))
+                futures.append(executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds))
             
             for future in concurrent.futures.as_completed(futures):
                 chunk_area, chunk_largest_range, chunk_largest_index = future.result()
@@ -1017,7 +1017,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
                     for i in range(num_workers):
                         start = i * chunk_size
                         end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-                        futures.append(executor.submit(calculate_area_chunk, start, end, pLs, pUs, thresholds))
+                        futures.append(executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds))
                     
                     for future in concurrent.futures.as_completed(futures):
                         chunk_area, chunk_largest_range, chunk_largest_index = future.result()

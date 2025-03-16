@@ -363,7 +363,7 @@ def create_pdf_report_reportlab(roc_fig, utility_fig, binormal_fig, parameters_d
         elements.append(Image(BytesIO(apar_img_bytes), width=apar_img_width, height=apar_img_height))
         elements.append(Spacer(1, 0.2*inch))
         
-        apar_intro = """The applicability area (ApAr) metric involves 1) calculating the range of priors from the two thresholds (𝑝𝑈(𝑐) − 𝑝𝐿(𝑐)) and 2) integrating over the entire ROC to obtain the cumulative ranges of applicable priors. We eliminate the need to define a prior beforehand and covers the entire possible range. A model with an ApAr of zero indicates employing the model as a test for the probability of disease has no value compared to a treat-none or treat-all strategy. On the other hand, high applicability indicates that the model is useful as a test for the probability of disease over greater ranges of priors."""
+        apar_intro = """The applicability area (ApAr) metric involves 1) calculating the range of priors from the two thresholds (p<sub>U</sub> (c)) − p<sub>L</sub> (c)) and 2) integrating over the entire ROC to obtain the cumulative ranges of applicable priors. We eliminate the need to define a prior beforehand and covers the entire possible range. A model with an ApAr of zero indicates employing the model as a test for the probability of disease has no value compared to a treat-none or treat-all strategy. On the other hand, high applicability indicates that the model is useful as a test for the probability of disease over greater ranges of priors."""
         
         elements.append(Paragraph(apar_intro, normal_style))
         elements.append(Spacer(1, 0.1*inch))
@@ -381,7 +381,7 @@ def create_pdf_report_reportlab(roc_fig, utility_fig, binormal_fig, parameters_d
         
         elements.append(Spacer(1, 0.1*inch))
         # No need to store in variables, add paragraphs directly
-        elements.append(Paragraph("Here are the key components in this plot:", normal_style))
+        # elements.append(Paragraph("Here are the key components in this plot:", normal_style))
         
         # Use direct paragraph approach instead of nested lists
         elements.append(Paragraph("<b>Key Components:</b>", normal_style))

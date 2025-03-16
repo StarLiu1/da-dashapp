@@ -161,7 +161,10 @@ def process_roc_chunk_vectorized(tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u):
     
     return pL_array.tolist(), pStar_array.tolist(), pU_array.tolist()
 
-# Parallelized main function with improved array handling
+# Define this function outside modelPriorsOverRoc
+def process_args(args):
+    return process_roc_chunk_vectorized(*args)
+
 def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB, num_workers=4):
     # Extract tpr and fpr arrays from modelChosen - vectorized approach
     if isinstance(modelChosen['tpr'], list) and len(modelChosen['tpr']) > 0:
@@ -189,12 +192,10 @@ def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB, num_workers=4
     tpr_chunks = [tprArray[i:i+chunk_size] for i in range(0, len(tprArray), chunk_size)]
     fpr_chunks = [fprArray[i:i+chunk_size] for i in range(0, len(fprArray), chunk_size)]
     
-    # Process in parallel
+    # Process in parallel using the defined function instead of lambda
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-        results = list(executor.map(
-            lambda args: process_roc_chunk_vectorized(*args),
-            [(tpr, fpr, uTN, uTP, uFN, uFP, u) for tpr, fpr in zip(tpr_chunks, fpr_chunks)]
-        ))
+        args_list = [(tpr, fpr, uTN, uTP, uFN, uFP, u) for tpr, fpr in zip(tpr_chunks, fpr_chunks)]
+        results = list(executor.map(process_args, args_list))
     
     # Combine results
     pLs = []
@@ -466,6 +467,10 @@ def calculate_area_chunk_optimized(start, end, pLs, pUs, thresholds):
     
     return area, largestRangePrior, largestRangePriorThresholdIndex
 
+def calculate_area_chunk_wrapper(args):
+    start, end, pLs, pUs, thresholds = args
+    return calculate_area_chunk_optimized(start, end, pLs, pUs, thresholds)
+
 # Parallelized main function
 def applicableArea(modelRow, thresholds, utils, p, HoverB, num_workers=4):
     """
@@ -507,13 +512,10 @@ def applicableArea(modelRow, thresholds, utils, p, HoverB, num_workers=4):
     
     # Process chunks in parallel
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-        future_to_chunk = {
-            executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds): (start, end)
-            for start, end in chunk_ranges
-        }
+        chunk_args = [(start, end, pLs, pUs, thresholds) for start, end in chunk_ranges]
+        future_results = list(executor.map(calculate_area_chunk_wrapper, chunk_args))
         
-        for future in concurrent.futures.as_completed(future_to_chunk):
-            chunk_area, chunk_largest_range, chunk_largest_idx = future.result()
+        for i, (chunk_area, chunk_largest_range, chunk_largest_idx) in enumerate(future_results):
             area += chunk_area
             
             if chunk_largest_range > largestRangePrior:
