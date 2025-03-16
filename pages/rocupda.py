@@ -184,7 +184,8 @@ def get_layout():
                     ),
                     
                 ]),
-                
+                html.Div( children='Dashboard as of: 03/15/25', style={'marginTop': 0, 'marginBottom': 5}),
+
                 
             ], style={'paddingLeft': '10px'})
         ], style={'height': '100%', 'width': '30%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
