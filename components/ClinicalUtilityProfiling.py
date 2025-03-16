@@ -73,72 +73,98 @@ def test(x, sensitivity, specificity, uTN, uTP, uFN, uFP, u):
 
 def pLpStarpUThresholds(sens, spec, uTN, uTP, uFN, uFP, u):
     """
-    Identifies the three thresholds formed by the three utility lines
+    Vectorized function that identifies the three thresholds formed by the three utility lines.
     
     Args: 
-        sens (float): sensitivity of the test
-        spec (float): specificity of the test
+        sens (float or array-like): sensitivity of the test
+        spec (float or array-like): specificity of the test
         uTN (float): utility of true negative
         uTP (float): utility of true positive
         uFN (float): utility of false negative
         uFP (float): utility of false positive
-        u: utility of the test itself
+        u (float): utility of the test itself
         
     Returns: 
-        a list of three thresholds (pL, pStar, and pU): [pL, pStar, pU]
+        If scalar inputs: a list of three thresholds [pL, pStar, pU]
+        If array inputs: three lists [pLs, pStars, pUs] containing thresholds for each input pair
     """
-    # Convert to numpy arrays with single element for vectorized function
-    sens_array = np.array([sens])
-    spec_array = np.array([spec])
+    # Determine if inputs are scalar or array-like
+    try:
+        # Try to iterate through sens
+        sens_iter = iter(sens)
+        # If successful, inputs are array-like
+        array_input = True
+    except TypeError:
+        # If TypeError, inputs are scalar
+        array_input = False
     
-    pL_array, pStar_array, pU_array = pLpStarpUThresholds_vectorized(sens_array, spec_array, uTN, uTP, uFN, uFP, u)
-    
-    return [float(pL_array[0]), float(pStar_array[0]), float(pU_array[0])]
-
-def pLpStarpUThresholds_vectorized(sens, spec, uTN, uTP, uFN, uFP, u):
-    """
-    Identifies the three thresholds formed by the three utility lines
-    
-    Args: 
-        sens (float): sensitivity of the test
-        spec (float): specificity of the test
-        uTN (float): utility of true negative
-        uTP (float): utility of true positive
-        uFN (float): utility of false negative
-        uFP (float): utility of false positive
-        u: utility of the test itself
+    # For scalar inputs, use the original approach
+    if not array_input:
+        x = sy.symbols('x')
         
-    Returns: 
-        a list of three thresholds (pL, pStar, and pU): [pL, pStar, pU]
-    
-    """
-    # For pU (treatAll = test)
-    A_pU = sens * uTP + (1 - sens) * uFN - (1 - spec) * uFP - spec * uTN - u - uFP
-    B_pU = uTP - uFP
-    pU_array = A_pU / B_pU
-    
-    # For pStar (treatAll = treatNone)
-    pStar_array = np.full_like(sens, (uTN - uFP) / (uTP - uFP + uTN - uFN))
-    
-    # For pL (treatNone = test)
-    A_pL = sens * uTP + (1 - sens) * uFN - (1 - spec) * uFP - spec * uTN - u - uTN
-    B_pL = uFN - uTN
-    pL_array = A_pL / B_pL
-    
-    # Apply bounds
-    pU_array = np.where(np.isnan(pU_array) | np.isinf(pU_array), -999, pU_array)
-    pU_array = np.where(pU_array > 1, 1, pU_array)
-    pU_array = np.where((pU_array < 0) & (pU_array != -999), 0, pU_array)
-    
-    pStar_array = np.where(np.isnan(pStar_array) | np.isinf(pStar_array), -999, pStar_array)
-    pStar_array = np.where(pStar_array > 1, 1, pStar_array)
-    pStar_array = np.where((pStar_array < 0) & (pStar_array != -999), 0, pStar_array)
-    
-    pL_array = np.where(np.isnan(pL_array) | np.isinf(pL_array), -999, pL_array)
-    pL_array = np.where(pL_array > 1, 1, pL_array)
-    pL_array = np.where((pL_array < 0) & (pL_array != -999), 0, pL_array)
-    
-    return pL_array, pStar_array, pU_array
+        # Calculate pStar (treatment threshold) - this is independent of sens/spec
+        pStar_eq = treatAll(x, uFP, uTP) - treatNone(x, uFN, uTN)
+        pStar_sol = sy.solve(pStar_eq, x)
+        pStar = -999 if (len(pStar_sol) == 0) else float(pStar_sol[0])
+        pStar = 1 if (pStar > 1) else pStar
+        pStar = 0 if ((pStar < 0) & (pStar != -999)) else pStar
+        
+        # Calculate pU (upper threshold)
+        pU_eq = treatAll(x, uFP, uTP) - test(x, sens, spec, uTN, uTP, uFN, uFP, u)
+        pU_sol = sy.solve(pU_eq, x)
+        pU = -999 if (len(pU_sol) == 0) else float(pU_sol[0])
+        pU = 1 if (pU > 1) else pU
+        pU = 0 if ((pU < 0) & (pU != -999)) else pU
+        
+        # Calculate pL (lower threshold)
+        pL_eq = treatNone(x, uFN, uTN) - test(x, sens, spec, uTN, uTP, uFN, uFP, u)
+        pL_sol = sy.solve(pL_eq, x)
+        pL = -999 if (len(pL_sol) == 0) else float(pL_sol[0])
+        pL = 1 if (pL > 1) else pL
+        pL = 0 if ((pL < 0) & (pL != -999)) else pL
+        
+        return [pL, pStar, pU]
+    else:
+        # For array inputs, we'll calculate pStar once (it's the same for all pairs)
+        # and then loop through sens/spec pairs for pL and pU
+        sens_array = np.asarray(sens)
+        spec_array = np.asarray(spec)
+        
+        # Calculate pStar (independent of sens/spec)
+        x = sy.symbols('x')
+        pStar_eq = treatAll(x, uFP, uTP) - treatNone(x, uFN, uTN)
+        pStar_sol = sy.solve(pStar_eq, x)
+        pStar_val = -999 if (len(pStar_sol) == 0) else float(pStar_sol[0])
+        pStar_val = 1 if (pStar_val > 1) else pStar_val
+        pStar_val = 0 if ((pStar_val < 0) & (pStar_val != -999)) else pStar_val
+        
+        # Initialize result lists
+        pLs = []
+        pStars = []
+        pUs = []
+        
+        # Process each (sens, spec) pair
+        for s, sp in zip(sens_array, spec_array):
+            # Calculate pU
+            pU_eq = treatAll(x, uFP, uTP) - test(x, s, sp, uTN, uTP, uFN, uFP, u)
+            pU_sol = sy.solve(pU_eq, x)
+            pU = -999 if (len(pU_sol) == 0) else float(pU_sol[0])
+            pU = 1 if (pU > 1) else pU
+            pU = 0 if ((pU < 0) & (pU != -999)) else pU
+            
+            # Calculate pL
+            pL_eq = treatNone(x, uFN, uTN) - test(x, s, sp, uTN, uTP, uFN, uFP, u)
+            pL_sol = sy.solve(pL_eq, x)
+            pL = -999 if (len(pL_sol) == 0) else float(pL_sol[0])
+            pL = 1 if (pL > 1) else pL
+            pL = 0 if ((pL < 0) & (pL != -999)) else pL
+            
+            # Add results to lists
+            pLs.append(pL)
+            pStars.append(pStar_val)  # Same for all pairs
+            pUs.append(pU)
+        
+        return [pLs, pStars, pUs]
 
 # Helper function for processing a chunk of TPR/FPR arrays
 def process_roc_chunk_vectorized(tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u):
@@ -157,13 +183,16 @@ def process_roc_chunk_vectorized(tpr_chunk, fpr_chunk, uTN, uTP, uFN, uFP, u):
     fpr_array = np.array(fpr_chunk)
     spec_array = 1 - fpr_array
     
-    pL_array, pStar_array, pU_array = pLpStarpUThresholds_vectorized(tpr_array, spec_array, uTN, uTP, uFN, uFP, u)
-    
-    return pL_array.tolist(), pStar_array.tolist(), pU_array.tolist()
+    # pLpStarpUThresholds already returns lists for array inputs
+    return pLpStarpUThresholds(tpr_array, spec_array, uTN, uTP, uFN, uFP, u)
 
 # Define this function outside modelPriorsOverRoc
 def process_args(args):
-    return process_roc_chunk_vectorized(*args)
+    tpr, fpr, uTN, uTP, uFN, uFP, u = args
+    # Convert fpr to specificity
+    spec = [1-fp for fp in fpr]
+    # Use the vectorized function directly
+    return pLpStarpUThresholds(tpr, spec, uTN, uTP, uFN, uFP, u)
 
 def modelPriorsOverRoc(modelChosen, uTN, uTP, uFN, uFP, u, HoverB, num_workers=4):
     # Extract tpr and fpr arrays from modelChosen - vectorized approach
@@ -417,14 +446,14 @@ def calculate_area_chunk_optimized(start, end, pLs, pUs, thresholds):
     # Calculate areas for each segment
     for i in range(len(pLs) - 1):
         # Case 1: Both endpoints have pL < pU
-        if pLs[i] < pUs[i] and pLs[i+1] < pUs[i+1]:
+        if (pLs[i] < pUs[i]) and (pLs[i+1] < pUs[i+1]):
             rangePrior = pUs[i] - pLs[i]
             rangePriorNext = pUs[i+1] - pLs[i+1]
             avgRangePrior = (rangePrior + rangePriorNext) / 2
             area += abs(avgRangePrior) * abs(thresholds[i+1] - thresholds[i])
         
         # Case 2: Intersection where pL > pU at first point, pL < pU at second point
-        elif pLs[i] > pUs[i] and pLs[i+1] < pUs[i+1]:
+        elif (pLs[i] > pUs[i]) and (pLs[i+1] < pUs[i+1]):
             x0 = thresholds[i]
             x1 = thresholds[i+1]
             if x0 != x1:
@@ -445,7 +474,7 @@ def calculate_area_chunk_optimized(start, end, pLs, pUs, thresholds):
                     pass
         
         # Case 3: Intersection where pL < pU at first point, pL > pU at second point
-        elif pLs[i] < pUs[i] and pLs[i+1] > pUs[i+1]:
+        elif (pLs[i] < pUs[i]) and (pLs[i+1] > pUs[i+1]):
             x0 = thresholds[i]
             x1 = thresholds[i+1]
             if x0 != x1:
