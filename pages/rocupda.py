@@ -14,7 +14,7 @@ from components.loading_component import create_loading_overlay
 import json
 import plotly.io as pio
 import base64
-from weasyprint import HTML
+# from weasyprint import HTML
 import io
 from scipy.special import comb 
 from components.report import create_pdf_report_reportlab, create_roc_plot

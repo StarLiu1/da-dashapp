@@ -19,3 +19,6 @@ pL_equation.png
 EU_equation.png
 app.zip
 .deployment
+components/ClinicalUtilityProfiling copy.py
+components/report copy.py
+pages/rocupda.py
