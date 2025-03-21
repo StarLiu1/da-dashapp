@@ -180,7 +180,7 @@ def get_layout():
                             }),
                             dcc.Download(id="download-report-wapar"),
                         ],
-                        style={'display': 'inline-block', 'margin-left': 'auto', 'margin-right': 'auto'}
+                        style={'display': 'inline-block', 'marginLeft': 'auto', 'marginRight': 'auto'}
                     ),
                     
                 ]),
@@ -317,7 +317,7 @@ def get_layout():
     # dcc.Store(id='drawing-mode', data=False)
     create_footer(),
 
-], style={'overflow-x': 'hidden'})
+], style={'overflowX': 'hidden'})
 
 register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
 
