@@ -21,7 +21,8 @@ def create_app_bar():
             html.Div([
                 # Title
                 
-                
+                dcc.Input(id='important-data-1', placeholder='Data 1', style = {'display': 'none'}),
+
                 # Tabs container: Main Dashboard, ApAr, Read Me, GitHub
                 html.Div([
                     html.A("Home", href="/", 
@@ -29,7 +30,7 @@ def create_app_bar():
                                "fontSize": "20px", "fontWeight": "bold", "color": "white", "marginRight": "50px",
                                "textDecoration": "none", "padding": "5px", "transition": "color 0.3s ease, background-color 0.3s ease"
                            }, className="tab-link"),
-                    html.A("Applicability Area (ApAr)", href="/apar", target="_blank", 
+                    html.A("Applicability Area (ApAr)", href="/apar", id="apar-tab", target="_blank", 
                            style={
                                "fontSize": "20px", "fontWeight": "bold", "color": "white", "marginRight": "60px",
                                "textDecoration": "none", "padding": "5px", "transition": "color 0.3s ease, background-color 0.3s ease"

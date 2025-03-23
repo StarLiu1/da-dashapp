@@ -54,6 +54,11 @@ def get_layout():
         """, type="text/javascript"),
     create_app_bar(),
     html.Div([
+        # Hidden div to trigger the callback when apar-tab is clicked
+        html.Div(id='tab-clicked-trigger', style={'display': 'none'}),
+        # Passing data to apar
+        dcc.Input(id='important-data-1', placeholder='Data 1', style = {'display': 'none'}),
+        #main
         html.Div([
             html.Div([
                 dcc.Dropdown(
@@ -611,6 +616,7 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
 # global variables
 mode_status = 'simulated'
 previous_values = {
+    'savedToPass': False,
     'predictions': [0, 0, 0],
     'true_labels': [0, 1, 0],
     'fpr': [0, 0, 0],
@@ -1940,3 +1946,43 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
     # If conditions are not met (no click or no figure), return None and don't reset clicks
     return None, n_clicks
 
+
+# Callback to detect when APAR tab is clicked and save data before navigation
+@app.callback(
+    Output('tab-clicked-trigger', 'children'),
+    Input('apar-tab', 'n_clicks'),
+    prevent_initial_call=True
+)
+def detect_tab_click(n_clicks):
+    # This just serves as a trigger for the next callback
+    return f"APAR tab clicked: {n_clicks}"
+
+# Callback to save data to the shared store when APAR tab is clicked
+@app.callback(
+    Output('shared-data', 'data', allow_duplicate=True),
+    Input('apar-tab', 'children'),
+    [State('important-data-1', 'value'),
+     State('shared-data', 'data')],
+    prevent_initial_call=True
+)
+def save_data_before_navigation(trigger, data1, current_data):
+    if current_data is None:
+        current_data = {}
+    
+    # Update with the current values from your ROCUPDA page
+    current_data.update({
+        'data1_from_rocupda': previous_values
+        # Add any other data you want to pass
+    })
+    # print(current_data)
+    return current_data
+
+# Optional: Debug callback to see what's in shared-data
+# @app.callback(
+#     Output('debug-data-area', 'children'),
+#     Input('shared-data', 'data')
+# )
+# def display_shared_data(data):
+#     if data:
+#         return f"Shared data: {str(data)}"
+#     return "No shared data yet"
