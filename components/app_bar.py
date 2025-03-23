@@ -34,7 +34,7 @@ def create_app_bar():
                                "fontSize": "20px", "fontWeight": "bold", "color": "white", "marginRight": "60px",
                                "textDecoration": "none", "padding": "5px", "transition": "color 0.3s ease, background-color 0.3s ease"
                            }, className="tab-link"),
-                    html.A("Clinical Utility Profiling - Decision Analytic Dashboard", href="/",
+                    html.A("Interactive Clinical Utility Decision Analytic (iCUDA) Dashboard", href="/",
                          style={
                              "fontSize": "30px", "fontWeight": "bold", "color": "white", 
                              "textAlign": "center", "padding": "5px", "marginRight": "100px", "textDecoration": "none"
