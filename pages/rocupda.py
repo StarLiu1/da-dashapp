@@ -1957,6 +1957,8 @@ def detect_tab_click(n_clicks):
     # This just serves as a trigger for the next callback
     return f"APAR tab clicked: {n_clicks}"
 
+
+
 # Callback to save data to the shared store when APAR tab is clicked
 @app.callback(
     Output('shared-data', 'data', allow_duplicate=True),
@@ -1977,12 +1979,30 @@ def save_data_before_navigation(trigger, data1, current_data):
     # print(current_data)
     return current_data
 
-# Optional: Debug callback to see what's in shared-data
-# @app.callback(
-#     Output('debug-data-area', 'children'),
-#     Input('shared-data', 'data')
-# )
-# def display_shared_data(data):
-#     if data:
-#         return f"Shared data: {str(data)}"
-#     return "No shared data yet"
+@app.callback(
+    [Output('shared-data', 'data', allow_duplicate=True),
+     Output('url', 'pathname')],  # Add navigation as an output
+    [Input('apar-tab', 'n_clicks')],
+    [State('shared-data', 'data')],
+    prevent_initial_call=True
+)
+def save_data_and_navigate(n_clicks, current_data):
+    if not n_clicks:
+        return dash.no_update, dash.no_update
+    
+    if current_data is None:
+        current_data = {}
+    
+    print(previous_values['savedToPass'])
+    previous_values['savedToPass'] = True
+
+    # Update with the current values from your ROCUPDA page
+    current_data.update({
+        'data1_from_rocupda': previous_values,
+        # Add any other data you want to pass
+    })
+    
+    print(f"Saving data before navigation: {len(current_data)}")
+    
+    # Return both the updated data and the new URL
+    return current_data, '/apar'

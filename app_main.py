@@ -14,23 +14,16 @@ app.layout = html.Div([
     dcc.Store(id='model-test-store', storage_type='session'),
     # Add a flag to force refreshing content
     dcc.Store(id='refresh-trigger', data=0),
+    # Add a store to track navigation source
+    dcc.Store(id='navigation-source', data=None, storage_type='session'),
     # Add a div to display debug info
     html.Div(id='debug-info', style={'display': 'none'}),
     html.Div(id='page-content')
 ])
 
-# Clientside callback to force refresh when URL changes
+# Use only ONE method to update refresh-trigger
+# Remove the clientside_callback and keep only the app.clientside_callback
 clientside_callback(
-    ClientsideFunction(
-        namespace='clientside',
-        function_name='updateRefreshTrigger'
-    ),
-    Output('refresh-trigger', 'data'),
-    Input('url', 'pathname'),
-)
-
-# Add this to your assets/clientside.js
-app.clientside_callback(
     """
     function(pathname) {
         return Date.now();  // Return current timestamp to force a refresh
@@ -40,16 +33,34 @@ app.clientside_callback(
     Input('url', 'pathname'),
 )
 
+# Callback to update navigation source
+@app.callback(
+    Output('navigation-source', 'data'),
+    [Input('apar-tab', 'n_clicks')],
+    [State('url', 'pathname')]
+)
+def update_navigation_source(apar_clicks, current_path):
+    ctx = callback_context
+    if not ctx.triggered:
+        return None
+    
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    if trigger_id == 'apar-tab':
+        return {'from': 'rocupda', 'tab_clicked': True}
+    return None
+
 @app.callback(
     Output('page-content', 'children'),
     [Input('url', 'pathname'),
      Input('refresh-trigger', 'data')],  # Adding the refresh trigger
-    [State('shared-data', 'data')]
+    [State('shared-data', 'data'),
+     State('navigation-source', 'data')]
 )
-def display_page(pathname, refresh_trigger, shared_data):
+def display_page(pathname, refresh_trigger, shared_data, navigation_source):
     ctx = callback_context
-    print(f"URL changed to: {pathname}, Refresh trigger: {refresh_trigger}")
-    print(f"Shared data available: {json.dumps(shared_data)}")
+    # print(f"URL changed to: {pathname}, Refresh trigger: {refresh_trigger}")
+    # print(f"Navigation source: {navigation_source}")
+    # print(f"Shared data available: {len(shared_data)}")
     
     if pathname == '/':
         return rocupda.get_layout()
@@ -57,7 +68,7 @@ def display_page(pathname, refresh_trigger, shared_data):
         # Explicitly pass shared_data to apar page
         if shared_data is None:
             shared_data = {}
-        print(f"Passing to APAR: {json.dumps(shared_data)}")
+        # print(f"Passing to APAR: {json.dumps(shared_data)}")
         return apar.get_layout(shared_data)
     elif pathname == '/readme':
         return readme.get_layout()
