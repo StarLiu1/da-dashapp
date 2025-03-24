@@ -88,7 +88,7 @@ def create_pdf_report_reportlab(roc_fig, utility_fig, binormal_fig, parameters_d
     elements = []
     
     # Title
-    elements.append(Paragraph("Clinical Utility Profiling - Decision Analytic Dashboard Report", title_style))
+    elements.append(Paragraph("Interactive Clinical Utility Decision Analytic (iCUDA) Dashboard Report", title_style))
     elements.append(Spacer(1, 0.2*inch))
     
     # Introduction
