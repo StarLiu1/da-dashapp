@@ -39,25 +39,15 @@ def hide_loading_overlay(n_clicks, n_intervals):
     return dash.no_update  # Keep the overlay if nothing has happened yet
 
 @app.callback(
-    [Output('shared-data', 'data', allow_duplicate=True),
-     #Output('apar-loading-overlay-interval', 'n_intervals')
-     ],
-    [Input('url', 'pathname')],
-    [State('shared-data', 'data')],
-    prevent_initial_call=True
+    Output('shared-data', 'data', allow_duplicate=True),
+    Input('url', 'pathname'),
+    State('shared-data', 'data')
 )
-def load_roc_data(pathname, shared_data):
-    if pathname == '/apar':
-        if shared_data and 'data1_from_rocupda' in shared_data:
-            print("APAR page loaded with shared data")
-            # Reset the interval timer to hide loading overlay
-            return [shared_data] #, 1
-        else:
-            print("APAR page loaded without shared data")
-            return [shared_data] #, 0
-    return dash.no_update#, dash.no_update
-
-
+def load_roc_data(pathname, roc_data):
+    if pathname == '/apar' and roc_data:
+        print("done")
+        return roc_data
+    return dash.no_update
 
 def get_layout(shared_data=None):
     # print(f"APAR received shared_data: {json.dumps(shared_data) if shared_data else 'None'}")
@@ -67,15 +57,13 @@ def get_layout(shared_data=None):
 
     # print(f'shared_data: {shared_data}')
     data1 = shared_data.get('data1_from_rocupda', 'No data1 passed')
-    print(len(data1))
-
-    #### return
+    # print(data1)
     return html.Div([
         # Debug section to display all shared data
             html.Div([
-                # html.H4("Debug: Raw Shared Data"),
+                html.H4("Debug: Raw Shared Data"),
                 html.Pre(
-                    json.dumps(shared_data['data1_from_rocupda']['cutoff_optimal_pt'], indent=2) if shared_data else "No shared data",
+                    json.dumps(shared_data, indent=2) if shared_data else "No shared data",
                     style={'whiteSpace': 'pre-wrap', 'border': '1px solid #ddd', 'padding': '10px'}
                 )
             ], style={'marginTop': '30px'}),
