@@ -861,7 +861,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             for i in range(num_workers):
                 start = i * chunk_size
                 end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-                futures.append(executor.submit(calculate_area_chunk_fully_vectorized, start, end, pLs, pUs, thresholds))
+                futures.append(executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds))
             
             for future in concurrent.futures.as_completed(futures):
                 chunk_area, chunk_largest_range, chunk_largest_index = future.result()
@@ -1017,7 +1017,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
                     for i in range(num_workers):
                         start = i * chunk_size
                         end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-                        futures.append(executor.submit(calculate_area_chunk_fully_vectorized, start, end, pLs, pUs, thresholds))
+                        futures.append(executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds))
                     
                     for future in concurrent.futures.as_completed(futures):
                         chunk_area, chunk_largest_range, chunk_largest_index = future.result()

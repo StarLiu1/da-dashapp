@@ -312,9 +312,9 @@ def create_pdf_report_reportlab(roc_fig, utility_fig, binormal_fig, parameters_d
     elements.append(Spacer(1, 0.1*inch))
     
     # Generate equation images from LaTeX
-    pL_base64 = latex_to_image_base64(r"\frac{FPR \cdot H - U(T)}{FPR \cdot H + TPR \cdot B}")
+    pL_base64 = latex_to_image_base64(r"\frac{\text{FPR} \cdot H - U(T)}{\text{FPR} \cdot H + \text{TPR} \cdot B}")
     EU_base64 = latex_to_image_base64(r"\frac{H}{H + B}")
-    pU_base64 = latex_to_image_base64(r"\frac{(1 - FPR) \cdot H + U(T)}{(1 - FPR) \cdot H + (1 - TPR) \cdot B}")
+    pU_base64 = latex_to_image_base64(r"\frac{(1 - \text{FPR}) \cdot H + U(T)}{(1 - \text{FPR}) \cdot H + (1 - \text{TPR}) \cdot B}")
     
     # Convert base64 to binary data
     pL_data = base64.b64decode(pL_base64)

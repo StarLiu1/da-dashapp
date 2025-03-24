@@ -9,8 +9,6 @@ from scipy.optimize import minimize_scalar
 # import bezier 
 from scipy.optimize import minimize
 import math
-import numpy as np
-from numba import jit
 
 import tracemalloc
 
@@ -399,15 +397,16 @@ def eqLine(x, x0, x1, y0, y1):
     # Calculate slope with safeguard against division by zero
     denominator = (x1 - x0)
     if denominator == 0:
-        return y0
+        denominator = 0.000001
     
     slope = (y1 - y0) / denominator
     y = slope * (x - x0) + y0
     return y
 
-def calculate_area_chunk_fully_vectorized(start, end, pLs, pUs, thresholds):
+# Function to calculate area for a chunk
+def calculate_area_chunk_optimized(start, end, pLs, pUs, thresholds):
     """
-    Fully vectorized version of calculate_area_chunk with optional Numba JIT compilation
+    Optimized version of calculate_area_chunk using vectorized operations
     
     Args:
         start (int): Start index
@@ -419,175 +418,87 @@ def calculate_area_chunk_fully_vectorized(start, end, pLs, pUs, thresholds):
     Returns:
         tuple: (area, largest range prior, index of largest range prior)
     """
+    area = 0
+    largestRangePrior = 0
+    largestRangePriorThresholdIndex = -999
+    
     # Convert to numpy arrays for vectorized operations
-    pLs_array = np.array(pLs[start:end+1])
-    pUs_array = np.array(pUs[start:end+1])
-    thresholds_array = np.array(thresholds[start:end+1])
+    pLs = np.array(pLs[start:end+1])
+    pUs = np.array(pUs[start:end+1])
+    thresholds = np.array(thresholds[start:end+1])
     
     # Calculate range of priors
-    ranges_prior = pUs_array - pLs_array
+    rangesPrior = pUs - pLs
     
     # Find largest range prior and its index
-    valid_ranges = (pLs_array < pUs_array)
-    largest_range_prior = 0
-    largest_range_prior_threshold_index = -999
+    if len(rangesPrior) > 0:
+        validRanges = (pLs < pUs)
+        if np.any(validRanges):
+            valid_ranges = rangesPrior[validRanges]
+            if len(valid_ranges) > 0:
+                max_idx = np.argmax(valid_ranges)
+                largestRangePrior = valid_ranges[max_idx]
+                # Get the original index
+                valid_indices = np.where(validRanges)[0]
+                if len(valid_indices) > max_idx:
+                    largestRangePriorThresholdIndex = start + valid_indices[max_idx]
     
-    if np.any(valid_ranges):
-        valid_range_values = ranges_prior[valid_ranges]
-        if len(valid_range_values) > 0:
-            max_idx = np.argmax(valid_range_values)
-            largest_range_prior = valid_range_values[max_idx]
-            valid_indices = np.where(valid_ranges)[0]
-            if len(valid_indices) > max_idx:
-                largest_range_prior_threshold_index = start + valid_indices[max_idx]
+    # Calculate areas for each segment
+    for i in range(len(pLs) - 1):
+        # Case 1: Both endpoints have pL < pU
+        if (pLs[i] < pUs[i]) and (pLs[i+1] < pUs[i+1]):
+            rangePrior = pUs[i] - pLs[i]
+            rangePriorNext = pUs[i+1] - pLs[i+1]
+            avgRangePrior = (rangePrior + rangePriorNext) / 2
+            area += abs(avgRangePrior) * abs(thresholds[i+1] - thresholds[i])
+        
+        # Case 2: Intersection where pL > pU at first point, pL < pU at second point
+        elif (pLs[i] > pUs[i]) and (pLs[i+1] < pUs[i+1]):
+            x0 = thresholds[i]
+            x1 = thresholds[i+1]
+            if x0 != x1:
+                pL0, pL1 = pLs[i], pLs[i+1]
+                pU0, pU1 = pUs[i], pUs[i+1]
+                
+                # Calculate intersection
+                try:
+                    x = sy.symbols('x')
+                    xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                    if len(xIntersect) > 0:
+                        xIntersect = float(xIntersect[0])
+                        rangePriorNext = pUs[i+1] - pLs[i+1]
+                        avgRangePrior = rangePriorNext / 2  # Average of 0 and range at next point
+                        area += abs(avgRangePrior) * abs(thresholds[i+1] - xIntersect)
+                except:
+                    # Fallback if symbolic solution fails
+                    pass
+        
+        # Case 3: Intersection where pL < pU at first point, pL > pU at second point
+        elif (pLs[i] < pUs[i]) and (pLs[i+1] > pUs[i+1]):
+            x0 = thresholds[i]
+            x1 = thresholds[i+1]
+            if x0 != x1:
+                pL0, pL1 = pLs[i], pLs[i+1]
+                pU0, pU1 = pUs[i], pUs[i+1]
+                
+                # Calculate intersection
+                try:
+                    x = sy.symbols('x')
+                    xIntersect = sy.solve(eqLine(x, x0, x1, pL0, pL1) - eqLine(x, x0, x1, pU0, pU1), x)
+                    if len(xIntersect) > 0:
+                        xIntersect = float(xIntersect[0])
+                        rangePrior = pUs[i] - pLs[i]
+                        avgRangePrior = rangePrior / 2  # Average of range at current point and 0
+                        area += abs(avgRangePrior) * abs(xIntersect - thresholds[i])
+                except:
+                    # Fallback if symbolic solution fails
+                    pass
     
-    # Fast analytical calculation for area using vectorized operations
-    return _calculate_area_fast(pLs_array, pUs_array, thresholds_array, start), largest_range_prior, largest_range_prior_threshold_index
-
-@jit(nopython=True, cache=True)
-def _calculate_area_fast(pLs, pUs, thresholds, start_idx):
-    """
-    JIT-compiled function to calculate area quickly
-    """
-    area = 0.0
-    n = len(pLs)
-    
-    for i in range(n-1):
-        # Extract values for current segment
-        pL0, pL1 = pLs[i], pLs[i+1]
-        pU0, pU1 = pUs[i], pUs[i+1]
-        t0, t1 = thresholds[i], thresholds[i+1]
-        
-        # Skip if thresholds are identical
-        if t0 == t1:
-            continue
-            
-        # Case 1: Both endpoints have valid ranges
-        if (pL0 < pU0) and (pL1 < pU1):
-            range0 = pU0 - pL0
-            range1 = pU1 - pL1
-            avg_range = (range0 + range1) / 2
-            area += abs(avg_range) * abs(t1 - t0)
-            continue
-        
-        # For cases 2 and 3, we need to find intersection analytically
-        # This replaces the slower SymPy solution
-        
-        # Calculate slopes of the lines
-        m_upper = (pU1 - pU0) / (t1 - t0)
-        m_lower = (pL1 - pL0) / (t1 - t0)
-        
-        # If slopes are equal (lines are parallel), no intersection
-        if m_upper == m_lower:
-            continue
-        
-        # Calculate intersection point
-        # Upper line: y = pU0 + m_upper * (x - t0)
-        # Lower line: y = pL0 + m_lower * (x - t0)
-        # At intersection: pU0 + m_upper * (x - t0) = pL0 + m_lower * (x - t0)
-        # Solving for x: (m_upper - m_lower) * (x - t0) = pL0 - pU0
-        x_intersect = t0 + (pL0 - pU0) / (m_upper - m_lower)
-        
-        # Check if intersection is within the segment
-        if x_intersect < min(t0, t1) or x_intersect > max(t0, t1):
-            continue
-            
-        # Case 2: Intersection where lower > upper at first point, lower < upper at second point
-        if (pL0 > pU0) and (pL1 < pU1):
-            range1 = pU1 - pL1
-            avg_range = range1 / 2  # Average of 0 and range at next point
-            area += abs(avg_range) * abs(t1 - x_intersect)
-            
-        # Case 3: Intersection where lower < upper at first point, lower > upper at second point
-        elif (pL0 < pU0) and (pL1 > pU1):
-            range0 = pU0 - pL0
-            avg_range = range0 / 2  # Average of range at current point and 0
-            area += abs(avg_range) * abs(x_intersect - t0)
-    
-    return area
-
-# For systems where Numba is not available, provide a fallback
-def calculate_area_chunk_fully_vectorized_no_jit(start, end, pLs, pUs, thresholds):
-    """
-    Fallback version without Numba dependency
-    """
-    # Implementation similar to above but without the @jit decorator
-    # This can be expanded if needed
-    pLs_array = np.array(pLs[start:end+1])
-    pUs_array = np.array(pUs[start:end+1])
-    thresholds_array = np.array(thresholds[start:end+1])
-    
-    # Calculate range of priors
-    ranges_prior = pUs_array - pLs_array
-    
-    # Find largest range prior and its index
-    valid_ranges = (pLs_array < pUs_array)
-    largest_range_prior = 0
-    largest_range_prior_threshold_index = -999
-    
-    if np.any(valid_ranges):
-        valid_range_values = ranges_prior[valid_ranges]
-        if len(valid_range_values) > 0:
-            max_idx = np.argmax(valid_range_values)
-            largest_range_prior = valid_range_values[max_idx]
-            valid_indices = np.where(valid_ranges)[0]
-            if len(valid_indices) > max_idx:
-                largest_range_prior_threshold_index = start + valid_indices[max_idx]
-    
-    # Calculate area without Numba
-    area = 0.0
-    n = len(pLs_array)
-    
-    for i in range(n-1):
-        # Extract values for current segment
-        pL0, pL1 = pLs_array[i], pLs_array[i+1]
-        pU0, pU1 = pUs_array[i], pUs_array[i+1]
-        t0, t1 = thresholds_array[i], thresholds_array[i+1]
-        
-        # Skip if thresholds are identical
-        if t0 == t1:
-            continue
-            
-        # Case 1: Both endpoints have valid ranges
-        if (pL0 < pU0) and (pL1 < pU1):
-            range0 = pU0 - pL0
-            range1 = pU1 - pL1
-            avg_range = (range0 + range1) / 2
-            area += abs(avg_range) * abs(t1 - t0)
-            continue
-        
-        # Calculate slopes of the lines
-        m_upper = (pU1 - pU0) / (t1 - t0)
-        m_lower = (pL1 - pL0) / (t1 - t0)
-        
-        # If slopes are equal (lines are parallel), no intersection
-        if m_upper == m_lower:
-            continue
-        
-        # Calculate intersection point analytically
-        x_intersect = t0 + (pL0 - pU0) / (m_upper - m_lower)
-        
-        # Check if intersection is within the segment
-        if x_intersect < min(t0, t1) or x_intersect > max(t0, t1):
-            continue
-            
-        # Case 2: Intersection where lower > upper at first point, lower < upper at second point
-        if (pL0 > pU0) and (pL1 < pU1):
-            range1 = pU1 - pL1
-            avg_range = range1 / 2  # Average of 0 and range at next point
-            area += abs(avg_range) * abs(t1 - x_intersect)
-            
-        # Case 3: Intersection where lower < upper at first point, lower > upper at second point
-        elif (pL0 < pU0) and (pL1 > pU1):
-            range0 = pU0 - pL0
-            avg_range = range0 / 2  # Average of range at current point and 0
-            area += abs(avg_range) * abs(x_intersect - t0)
-    
-    return area, largest_range_prior, largest_range_prior_threshold_index
+    return area, largestRangePrior, largestRangePriorThresholdIndex
 
 def calculate_area_chunk_wrapper(args):
     start, end, pLs, pUs, thresholds = args
-    return calculate_area_chunk_fully_vectorized(start, end, pLs, pUs, thresholds)
+    return calculate_area_chunk_optimized(start, end, pLs, pUs, thresholds)
 
 # Parallelized main function
 def applicableArea(modelRow, thresholds, utils, p, HoverB, num_workers=4):
