@@ -38,35 +38,9 @@ def hide_loading_overlay(n_clicks, n_intervals):
         return {"display": "none"}  # Hides the overlay
     return dash.no_update  # Keep the overlay if nothing has happened yet
 
-@app.callback(
-    Output('shared-data', 'data', allow_duplicate=True),
-    Input('url', 'pathname'),
-    State('shared-data', 'data')
-)
-def load_roc_data(pathname, roc_data):
-    if pathname == '/apar' and roc_data:
-        print("done")
-        return roc_data
-    return dash.no_update
 
-def get_layout(shared_data=None):
-    # print(f"APAR received shared_data: {json.dumps(shared_data) if shared_data else 'None'}")
-
-    if shared_data is None:
-        shared_data = {}
-
-    # print(f'shared_data: {shared_data}')
-    data1 = shared_data.get('data1_from_rocupda', 'No data1 passed')
-    # print(data1)
+def get_layout():
     return html.Div([
-        # Debug section to display all shared data
-            html.Div([
-                html.H4("Debug: Raw Shared Data"),
-                html.Pre(
-                    json.dumps(shared_data, indent=2) if shared_data else "No shared data",
-                    style={'whiteSpace': 'pre-wrap', 'border': '1px solid #ddd', 'padding': '10px'}
-                )
-            ], style={'marginTop': '30px'}),
     create_loading_overlay(unique_id = 'apar-loading-overlay', loading_text=loadingText),
     html.Script("""
             document.addEventListener("DOMContentLoaded", function() {
