@@ -54,11 +54,6 @@ def get_layout():
         """, type="text/javascript"),
     create_app_bar(),
     html.Div([
-        # Hidden div to trigger the callback when apar-tab is clicked
-        html.Div(id='tab-clicked-trigger', style={'display': 'none'}),
-        # Passing data to apar
-        dcc.Input(id='important-data-1', placeholder='Data 1', style = {'display': 'none'}),
-        #main
         html.Div([
             html.Div([
                 dcc.Dropdown(
@@ -124,7 +119,7 @@ def get_layout():
                         min=0,
                         max=1,
                         step=0.01,
-                        value=0.6,
+                        value=0.85,
                         tooltip={"placement": "right", "always_visible": False},
                         marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
                     )
@@ -189,7 +184,7 @@ def get_layout():
                     ),
                     
                 ]),
-                html.Div( children='Dashboard as of: 03/15/25', style={'marginTop': 0, 'marginBottom': 5}),
+                html.Div( children='Dashboard as of: 03/23/25', style={'marginTop': 0, 'marginBottom': 5}),
 
                 
             ], style={'paddingLeft': '10px'})
@@ -616,7 +611,6 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
 # global variables
 mode_status = 'simulated'
 previous_values = {
-    'savedToPass': False,
     'predictions': [0, 0, 0],
     'true_labels': [0, 1, 0],
     'fpr': [0, 0, 0],
@@ -729,7 +723,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         slider_cutoff = 0.5
         click_data = None
         uTP = 0.8
-        uFP = 0.6
+        uFP = 0.85
         uTN = 1
         uFN = 0
         pD = 0.5
@@ -1496,8 +1490,14 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line1, 3), mode='lines', name='Treat All', line=dict(color='green')))
     utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line2, 3), mode='lines', name='Treat None', line=dict(color='orange')))
     utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line3, 3), mode='lines', name='Test', line=dict(color='blue')))
-    utility_fig.add_trace(go.Scatter(x=np.round(p_values, 3), y=np.round(line4, 3), mode='lines', name='Optimal Cutoff', line=dict(color='red')))
-
+    dots_dens = 2
+    utility_fig.add_trace(go.Scatter(
+        x=np.round(p_values[::dots_dens], 3), 
+        y=np.round(line4[::dots_dens], 3), 
+        mode='markers',  # Changed from 'lines' to 'markers'
+        name='Optimal Cutoff', 
+        marker=dict(color='red')  # Changed 'line' to 'marker'
+    ))
     # Add a vertical line at x = pL
     # if the list is not empty
     if len(pL) == 0 or len(pU) == 0:
@@ -1520,7 +1520,7 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         y=[0, 1],  # Full height of the y-axis
         mode='lines',
         line=dict(color='black', width=2, dash='dash'),
-        name="pStar Treatment threshold"
+        name="pStar Treat/No Treat threshold"
     ))
 
     # Add a vertical line at x = pU
@@ -1652,15 +1652,92 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         distribution_fig = go.Figure()
         distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(diseased_pdf, 3), mode='lines', name=pos_label, line=dict(color='red'), fill='tozeroy'))
         distribution_fig.add_trace(go.Scatter(x=np.round(x_values, 3), y=np.round(healthy_pdf, 3), mode='lines', name=neg_label, line=dict(color='blue'), fill='tozeroy'))
-        distribution_fig.add_shape(
-            type="line",
-            x0=slider_cutoff,
-            y0=0,
-            x1=slider_cutoff,
-            y1=max(max(diseased_pdf), max(healthy_pdf))*1.1,
-            line=dict(color="blue", width=2, dash="dash"),
-            name='Cutoff Line'
+        # Add overlap regions
+        # First, find the minimum of both curves for each x value
+        overlap_y = np.minimum(diseased_pdf, healthy_pdf)
+
+        # False negative region (diseased below cutoff)
+        # Add overlap regions
+        # First, find the minimum of both curves for each x value
+        overlap_y = np.minimum(diseased_pdf, healthy_pdf)
+
+        # False negative region (diseased below cutoff)
+        fn_x = x_values[x_values <= slider_cutoff]
+        fn_y = diseased_pdf[x_values <= slider_cutoff]
+        fn_overlap_y = overlap_y[x_values <= slider_cutoff]
+
+        distribution_fig.add_trace(go.Scatter(
+            x=np.round(fn_x, 3),
+            y=np.round(fn_y, 3),
+            mode='none',
+            name='False Negative',
+            fill='tozeroy',
+            fillcolor='rgba(255, 0, 0, 0.3)',
+            showlegend=True
+        ))
+
+        # False positive region (healthy above cutoff)
+        fp_x = x_values[x_values >= slider_cutoff]
+        fp_y = healthy_pdf[x_values >= slider_cutoff]
+        fp_overlap_y = overlap_y[x_values >= slider_cutoff]
+
+        distribution_fig.add_trace(go.Scatter(
+            x=np.round(fp_x, 3),
+            y=np.round(fp_y, 3),
+            mode='none',
+            name='False Positive',
+            fill='tozeroy',
+            fillcolor='rgba(0, 0, 255, 0.3)',
+            showlegend=True
+        ))
+
+        # selected cutoff annotations
+        distribution_fig.add_trace(go.Scatter(
+            x=np.full_like(np.linspace(0, max(max(diseased_pdf), max(healthy_pdf))*1.1, 25), slider_cutoff),
+            y=np.linspace(0, max(max(diseased_pdf), max(healthy_pdf))*1.1, 25),
+            mode='markers',
+            name='Selected Cutoff',
+            marker=dict(color='blue', size=6)
+        ))
+        distribution_fig.add_annotation(
+            x=slider_cutoff,
+            y=max(max(diseased_pdf), max(healthy_pdf))*1.1,
+            xref="x",
+            yref="y",
+            text="Selected cutoff",
+            showarrow=False,
+            yshift=-10,
+            textangle=0
         )
+
+        # optimal cutoff annotations
+        # distribution_fig.add_shape(
+        #     type="line",
+        #     x0=cutoff_optimal_pt,
+        #     y0=0,
+        #     x1=cutoff_optimal_pt,
+        #     y1=max(max(diseased_pdf), max(healthy_pdf))*1.1,
+        #     line=dict(color="red", width=2, dash="dash"),
+        #     name='Optimal cutoff Line'
+        # )
+        distribution_fig.add_trace(go.Scatter(
+            x=np.full_like(np.linspace(0, max(max(diseased_pdf), max(healthy_pdf))*1.1, 25), cutoff_optimal_pt),
+            y=np.linspace(0, max(max(diseased_pdf), max(healthy_pdf))*1.1, 25),
+            mode='markers',
+            name='Optimal Cutoff',
+            marker=dict(color='red', size=6)
+        ))
+        distribution_fig.add_annotation(
+            x=cutoff_optimal_pt,
+            y=max(max(diseased_pdf), max(healthy_pdf))*1.1,
+            xref="x",
+            yref="y",
+            text="Optimal cutoff",
+            showarrow=False,
+            yshift=-10,
+            textangle=0
+        )
+        
         distribution_fig.update_layout(
             title={
                 'text': 'Diseased vs Healthy Distribution',
@@ -1848,7 +1925,7 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
             for i in range(num_workers):
                 start = i * chunk_size
                 end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-                futures.append(executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds))
+                futures.append(executor.submit(calculate_area_chunk_fully_vectorized, start, end, pLs, pUs, thresholds))
             
             for future in concurrent.futures.as_completed(futures):
                 chunk_area, chunk_largest_range, chunk_largest_index = future.result()
@@ -1946,63 +2023,3 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
     # If conditions are not met (no click or no figure), return None and don't reset clicks
     return None, n_clicks
 
-
-# Callback to detect when APAR tab is clicked and save data before navigation
-@app.callback(
-    Output('tab-clicked-trigger', 'children'),
-    Input('apar-tab', 'n_clicks'),
-    prevent_initial_call=True
-)
-def detect_tab_click(n_clicks):
-    # This just serves as a trigger for the next callback
-    return f"APAR tab clicked: {n_clicks}"
-
-
-
-# Callback to save data to the shared store when APAR tab is clicked
-@app.callback(
-    Output('shared-data', 'data', allow_duplicate=True),
-    Input('apar-tab', 'children'),
-    [State('important-data-1', 'value'),
-     State('shared-data', 'data')],
-    prevent_initial_call=True
-)
-def save_data_before_navigation(trigger, data1, current_data):
-    if current_data is None:
-        current_data = {}
-    
-    # Update with the current values from your ROCUPDA page
-    current_data.update({
-        'data1_from_rocupda': previous_values
-        # Add any other data you want to pass
-    })
-    # print(current_data)
-    return current_data
-
-@app.callback(
-    [Output('shared-data', 'data', allow_duplicate=True),
-     Output('url', 'pathname')],  # Add navigation as an output
-    [Input('apar-tab', 'n_clicks')],
-    [State('shared-data', 'data')],
-    prevent_initial_call=True
-)
-def save_data_and_navigate(n_clicks, current_data):
-    if not n_clicks:
-        return dash.no_update, dash.no_update
-    
-    if current_data is None:
-        current_data = {}
-    
-    print(previous_values['savedToPass'])
-    previous_values['savedToPass'] = True
-
-    # Update with the current values from your ROCUPDA page
-    current_data.update({
-        'data1_from_rocupda': previous_values,
-        # Add any other data you want to pass
-    })
-    
-    print(f"Saving data before navigation: {len(current_data)}")
-    
-    # Return both the updated data and the new URL
-    return current_data, '/apar'

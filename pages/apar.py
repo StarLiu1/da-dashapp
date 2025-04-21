@@ -38,47 +38,9 @@ def hide_loading_overlay(n_clicks, n_intervals):
         return {"display": "none"}  # Hides the overlay
     return dash.no_update  # Keep the overlay if nothing has happened yet
 
-@app.callback(
-    [Output('shared-data', 'data', allow_duplicate=True),
-     #Output('apar-loading-overlay-interval', 'n_intervals')
-     ],
-    [Input('url', 'pathname')],
-    [State('shared-data', 'data')],
-    prevent_initial_call=True
-)
-def load_roc_data(pathname, shared_data):
-    if pathname == '/apar':
-        if shared_data and 'data1_from_rocupda' in shared_data:
-            print("APAR page loaded with shared data")
-            # Reset the interval timer to hide loading overlay
-            return [shared_data] #, 1
-        else:
-            print("APAR page loaded without shared data")
-            return [shared_data] #, 0
-    return dash.no_update#, dash.no_update
 
-
-
-def get_layout(shared_data=None):
-    # print(f"APAR received shared_data: {json.dumps(shared_data) if shared_data else 'None'}")
-
-    if shared_data is None:
-        shared_data = {}
-
-    # print(f'shared_data: {shared_data}')
-    data1 = shared_data.get('data1_from_rocupda', 'No data1 passed')
-    print(len(data1))
-
-    #### return
+def get_layout():
     return html.Div([
-        # Debug section to display all shared data
-            html.Div([
-                # html.H4("Debug: Raw Shared Data"),
-                html.Pre(
-                    json.dumps(shared_data['data1_from_rocupda']['cutoff_optimal_pt'], indent=2) if shared_data else "No shared data",
-                    style={'whiteSpace': 'pre-wrap', 'border': '1px solid #ddd', 'padding': '10px'}
-                )
-            ], style={'marginTop': '30px'}),
     create_loading_overlay(unique_id = 'apar-loading-overlay', loading_text=loadingText),
     html.Script("""
             document.addEventListener("DOMContentLoaded", function() {
@@ -899,7 +861,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
             for i in range(num_workers):
                 start = i * chunk_size
                 end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-                futures.append(executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds))
+                futures.append(executor.submit(calculate_area_chunk_fully_vectorized, start, end, pLs, pUs, thresholds))
             
             for future in concurrent.futures.as_completed(futures):
                 chunk_area, chunk_largest_range, chunk_largest_index = future.result()
@@ -1055,7 +1017,7 @@ def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_cont
                     for i in range(num_workers):
                         start = i * chunk_size
                         end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
-                        futures.append(executor.submit(calculate_area_chunk_optimized, start, end, pLs, pUs, thresholds))
+                        futures.append(executor.submit(calculate_area_chunk_fully_vectorized, start, end, pLs, pUs, thresholds))
                     
                     for future in concurrent.futures.as_completed(futures):
                         chunk_area, chunk_largest_range, chunk_largest_index = future.result()
