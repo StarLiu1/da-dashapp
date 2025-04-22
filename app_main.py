@@ -9,7 +9,7 @@ server = app.server
 # Define layout and callbacks
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
-    dcc.Store(id='model-test-store', storage_type='session'),
+    dcc.Store(id='model-test-store', storage_type='local'),
     html.Div(id='page-content')
 ])
 

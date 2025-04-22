@@ -636,7 +636,7 @@ roc_plot_group = go.Figure()
 imported = False
 
 @app.callback(
-    Output('roc-plot', 'figure', allow_duplicate=True), 
+    [Output('roc-plot', 'figure', allow_duplicate=True), 
     Output('cutoff-value', 'children'), 
     Output('cutoff-slider', 'value'), 
     Output('optimalcutoff-value', 'children'), 
@@ -663,8 +663,9 @@ imported = False
     Output('distribution-plot-store', 'data'),
     Output('parameters-store', 'data'),
     # Output('model-store', 'data'),
+    Output('model-test-store', 'data')],
 
-    Input('cutoff-slider', 'value'), 
+    [Input('cutoff-slider', 'value'), 
     Input('roc-plot', 'clickData'), 
     Input('uTP-slider', 'value'), 
     Input('uFP-slider', 'value'), 
@@ -681,7 +682,7 @@ imported = False
     Input('toggle-draw-mode', 'n_clicks'),  # New input for button clicks
     
     Input('submit-classes', 'n_clicks'),
-    Input('labelnames-store', 'data'),
+    Input('labelnames-store', 'data')],
     [
     
     
@@ -1799,13 +1800,13 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
     if current_mode == 'imported' and slider_cutoff >= 1:
         slider_cutoff = 0.5
 
-    
+    # print(parameter_dict)
 
     return (roc_fig, cutoff_text, slider_cutoff, optimal_cutoff_text,
              utility_fig, distribution_fig,# initial_interval_disabled,
                disease_m_text, disease_sd_text, healthy_m_text, healthy_sd_text,
                  utp_text, ufp_text, utn_text, ufn_text, pDisease_text, roc_data, button_text, shapes,
-                 roc_dict, utility_dict, binormal_dict, parameter_dict)
+                 roc_dict, utility_dict, binormal_dict, parameter_dict, parameter_dict)
 
 
 @app.callback(

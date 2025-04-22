@@ -508,14 +508,18 @@ imported_2 = False
      Input('healthy-mean-slider-2', 'value'), 
      Input('healthy-std-slider-2', 'value'),
     #  Input('initial-interval-2', 'n_intervals')
+     Input('model-test-store', 'data'),
+     Input('url', 'pathname')
      ],
     # [State('roc-plot-2', 'figure')],
     prevent_initial_call=True
 )
-def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std):
+def update_plots_2(slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, disease_mean, disease_std, healthy_mean, healthy_std, shared_data, pathname):
+    if pathname != '/apar':
+        return dash.no_update
     ctx = dash.callback_context
     trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
-
+    print(shared_data)
     # if trigger_id == 'initial-interval-2':
     #     if initial_intervals == 0:
     #         slider_cutoff = 0.51
