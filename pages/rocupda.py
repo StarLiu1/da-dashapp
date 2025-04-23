@@ -7,17 +7,19 @@ from sklearn.metrics import roc_curve, roc_auc_score
 import plotly.graph_objects as go
 from components.ClinicalUtilityProfiling import *
 from scipy.stats import norm
-from components.app_bar import create_app_bar #, add_css, add_js  # Import the app bar and CSS function
-from components.footer import create_footer  # Import the footer
+from components.app_bar import create_app_bar 
+from components.footer import create_footer
 from components.info_button import create_info_mark, register_info_tooltip_callbacks
 from components.loading_component import create_loading_overlay
 import json
 import plotly.io as pio
 import base64
-# from weasyprint import HTML
 import io
 from scipy.special import comb 
 from components.report import create_pdf_report_reportlab, create_roc_plot
+import concurrent.futures
+import time
+import sympy as sy  # Required for adjustpLpUClassificationThreshold
 
 from app import app
 
@@ -162,9 +164,7 @@ def get_layout():
                     )
                 ], style={'width': '100%'}),
                 html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
-                # html.Button("Generate Report", id="generate-report-button", n_clicks=0),
                 
-                # dcc.Download(id="download-report"),
                 html.Div([
                     dcc.Loading(
                         id="loading-spinner",
@@ -182,11 +182,29 @@ def get_layout():
                         ],
                         style={'display': 'inline-block', 'marginLeft': 'auto', 'marginRight': 'auto'}
                     ),
-                    
                 ]),
-                html.Div( children='Dashboard as of: 03/23/25', style={'marginTop': 0, 'marginBottom': 5}),
-
                 
+                # Add "Show ApAr" button
+                html.Div([
+                    html.Button(
+                        "Show ApAr Figure", 
+                        id="apar-button", 
+                        n_clicks=0,
+                        style={
+                            'width': '100%',
+                            'marginTop': '15px',
+                            'marginBottom': '10px',
+                            'backgroundColor': '#012b75',
+                            'color': 'white',
+                            'border': 'none',
+                            'padding': '10px',
+                            'borderRadius': '5px',
+                            'cursor': 'pointer'
+                        }
+                    ),
+                ]),
+                
+                html.Div(children='Dashboard as of: 03/23/25', style={'marginTop': 0, 'marginBottom': 5}),
             ], style={'paddingLeft': '10px'})
         ], style={'height': '100%', 'width': '30%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
         html.Div([
@@ -194,8 +212,8 @@ def get_layout():
                 html.Div(
                         dcc.Loading(
                             id="loading",
-                            type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
-                            fullscreen=False,  # This will show the loading spinner across the entire page
+                            type="default",
+                            fullscreen=False,
                             children=[
                                 dcc.Graph(id='distribution-plot', style={'height': '45vh'})
                         ])
@@ -206,22 +224,16 @@ def get_layout():
                 html.Div([
                     html.Div(
                         style={
-                            # "display": "flex",  # Flexbox layout to stack elements horizontally
-                            # 'flexDirection': 'column',
-                            "alignItems": "center",  # Vertically center the items
+                            "alignItems": "center",
                             'height': '95%',
                             'margin': 0
                         },
                         children=[
                             dcc.Loading(
                                 id="loading",
-                                type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
-                                fullscreen=False,  # This will show the loading spinner across the entire page
-                                style={
-                                    # "display": "flex",  # Flexbox layout to stack elements horizontally
-                                    # 'flexDirection': 'column',
-                                    'margin': 0
-                                },
+                                type="default",
+                                fullscreen=False,
+                                style={'margin': 0},
                                 children=[
                                     dcc.Graph(id='roc-plot', style={'height': '47vh', "width": "35vw"}),
                                 ]
@@ -231,8 +243,8 @@ def get_layout():
                     
                     html.Div(
                         style={
-                            "display": "flex",  # Flexbox layout to stack elements horizontally
-                            "alignItems": "center",  # Vertically center the items
+                            "display": "flex",
+                            "alignItems": "center",
                             'height': '5%',
                             'margin': 0
                         },
@@ -247,9 +259,7 @@ def get_layout():
                             ),
                             html.Div(style = {'width': '5%'}),
                             
-
                             # The question mark
-                            # create_roc_info_mark()
                             create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'],
                                             link_text = tooltip_data['roc']['link_text'],
                                             link_url=tooltip_data['roc']['link_url'], 
@@ -258,19 +268,19 @@ def get_layout():
                     )
                     
                 ], style={'height': '100%', 'width': '50%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '0px'}),
-                # html.Div(id='roc-plot-info'),
+                
                 html.Div([
                     dcc.Loading(
                         id="loading",
-                        type="default",  # "circle" or "default" for spinner, "dot" for a dot loading animation
-                        fullscreen=False,  # This will show the loading spinner across the entire page
+                        type="default",
+                        fullscreen=False,
                         children=[
                             dcc.Graph(id='utility-plot', style={'height': '47vh', "width": "35vw"}),
                     ]),
                     html.Div(
                         style={
-                            "display": "flex",  # Flexbox layout to stack elements horizontally
-                            "alignItems": "center",  # Vertically center the items
+                            "display": "flex",
+                            "alignItems": "center",
                             "height": "5%",
                             'paddingTop': '1.75%'
                         },
@@ -291,8 +301,47 @@ def get_layout():
 
     ], style={'height': '100vh', 'display': 'flex', 'width': '100%', 'flexDirection': 'row'}),
     
+    # Add ApAr figure container - hidden by default
+    html.Div([
+        html.Div([
+            html.H2("Applicability Area (ApAr)", style={
+                'textAlign': 'center',
+                'marginBottom': '10px',
+                'marginTop': '20px',
+                'color': '#012b75'
+            }),
+            html.Div([
+                dcc.Loading(
+                    id="apar-loading",
+                    type="default",
+                    fullscreen=False,
+                    children=[
+                        dcc.Graph(id='apar-plot-rocupda', style={'height': '60vh', 'width': '100%'})
+                    ]
+                ),
+                html.Div(
+                    style={
+                        "display": "flex",
+                        "alignItems": "center",
+                        "justifyContent": "flex-end",
+                        "height": "40px"
+                    },
+                    children=[
+                        create_info_mark(
+                            tooltip_id="apar-rocupda", 
+                            tooltip_text=tooltip_data['apar']['tooltip_text'],
+                            link_text=tooltip_data['apar']['link_text'],
+                            link_url=tooltip_data['apar']['link_url'], 
+                            top="-185px", 
+                            left="50%", 
+                            width="200px"
+                        ),
+                    ]
+                )
+            ], style={'width': '80%', 'margin': '0 auto'})
+        ])
+    ], id="apar-container", style={'display': 'none'}),
     
-    # dcc.Interval(id='initial-interval', interval=1000, n_intervals=0, max_intervals=1),
     html.Div(style = {'height': '20px'}),
     dcc.Store(id='imported-data'),
     dcc.Store(id='min-threshold-store'),
@@ -301,25 +350,24 @@ def get_layout():
     dcc.Store(id='disease-std-slider'),
     dcc.Store(id='healthy-mean-slider'),
     dcc.Store(id='healthy-std-slider'),
-    # dcc.Store(id='cutoff-slider'),
     dcc.Store(id='dm-value'),
     dcc.Store(id='dsd-value'),
     dcc.Store(id='hm-value'),
     dcc.Store(id='hsd-value'),
     dcc.Store(id='roc-store'),
     dcc.Store(id='shape-store', data=[]),
-
     dcc.Store(id='roc-plot-store'),
     dcc.Store(id='utility-plot-store'),
     dcc.Store(id='distribution-plot-store'),
     dcc.Store(id='parameters-store'),
     dcc.Store(id='labelnames-store'),
-    # dcc.Store(id='drawing-mode', data=False)
+    dcc.Store(id='apar-data-store'),  # Store for ApAr data
     create_footer(),
 
 ], style={'overflowX': 'hidden'})
 
-register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility"])
+# Register tooltips for ApAr in rocupda
+register_info_tooltip_callbacks(app, tooltip_id_list=["roc", "utility", "apar-rocupda"])
 
 @app.callback(
     Output('input-fields', 'children'),
@@ -763,6 +811,12 @@ def update_plots(slider_cutoff, click_data, uTP, uFP, uTN, uFN, pD, data_type, u
         fpr, tpr, thresholds = roc_curve(true_labels, predictions)
         auc = roc_auc_score(true_labels, predictions)
         thresholds = cleanThresholds(thresholds)
+
+        # previous_values['predictions'] = predictions
+        # previous_values['true_labels'] = true_labels
+        # previous_values['fpr'] = fpr
+        # previous_values['tpr'] = tpr
+        # previous_values['thresholds'] = thresholds
 
     # if on initial load or when the predictions are the default values
     elif np.array_equal([0,0,0], previous_values['predictions']):
@@ -2023,3 +2077,412 @@ def generate_report(n_clicks, roc_dict, utility_dict, binormal_dict, parameters_
     # If conditions are not met (no click or no figure), return None and don't reset clicks
     return None, n_clicks
 
+# # Toggle display of ApAr container
+# @app.callback(
+#     Output('apar-container', 'style'),
+#     [Input('apar-button', 'n_clicks')],
+#     [State('apar-container', 'style')]
+# )
+# def toggle_apar_container(n_clicks, current_style):
+#     if n_clicks > 0:
+#         return {'display': 'block'}
+#     return {'display': 'none'}
+
+# New callback to generate ApAr plot
+@app.callback(
+    [
+        Output('apar-container', 'style'),
+        Output('apar-plot-rocupda', 'figure'),
+        Output('apar-data-store', 'data')
+        ],
+    [
+        Input('apar-button', 'n_clicks'),
+        State('apar-container', 'style'),
+
+        Input('cutoff-slider', 'value'),
+
+    
+        State('uTP-slider', 'value'),
+        State('uFP-slider', 'value'),
+        State('uTN-slider', 'value'),
+        State('uFN-slider', 'value'),
+        State('pD-slider', 'value'),
+        State('data-type-dropdown', 'value'),
+        State({'type': 'upload-data', 'index': ALL}, 'contents'),
+        State('roc-store', 'data'),
+        State('apar-data-store', 'data')
+    ],
+    prevent_initial_call=True
+)
+def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, roc_data, apar_store):
+    # Only update if button was clicked at least once and we have ROC data
+    
+    print(uTP)
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    # If no button clicks yet, don't show anything
+    if n_clicks == 0 and trigger_id != 'cutoff-slider':
+        return {'display': 'none'}, dash.no_update, dash.no_update
+
+    # If this was triggered by the cutoff slider and we already have apar data, just update the cutoff line
+    if trigger_id == 'cutoff-slider' and apar_store is not None:
+        # Only process if the container is visible
+        if current_style.get('display') != 'block':
+            return dash.no_update, dash.no_update, dash.no_update
+            
+        # Update only the cutoff line in the existing figure
+        fig = go.Figure()
+        
+        # Add existing traces from stored data
+        fig.add_trace(go.Scatter(
+            x=apar_store['thresholds'],
+            y=apar_store['pUs'],
+            mode='lines',
+            name='pUs',
+            line=dict(color='blue')
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=apar_store['thresholds'],
+            y=apar_store['pLs'],
+            mode='lines',
+            name='pLs',
+            line=dict(color='orange')
+        ))
+        
+        # Add updated vertical line at new cutoff
+        fig.add_trace(go.Scatter(
+            x=[slider_cutoff, slider_cutoff],
+            y=[0, 1],
+            mode='lines',
+            line=dict(color='green', width=2, dash='dash'),
+            name="Selected threshold"
+        ))
+        
+        # Update annotation for the cutoff line
+        fig.update_layout(
+            title={
+                'text': 'Applicability Area (ApAr)',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            xaxis_title='Probability Cutoff Threshold',
+            yaxis_title='Prior Probability (Prevalence)',
+            xaxis=dict(tickmode='array', tickvals=np.arange(round(min(apar_store['thresholds']), 1), 
+                                                         min(round(max(apar_store['thresholds']), 1), 5), step=0.1)),
+            yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
+            template='plotly_white',
+            annotations=[
+                # Annotation for the ApAr value
+                dict(
+                    x=0.95,
+                    y=0.05,
+                    xref='paper',
+                    yref='paper',
+                    text=f"ApAr = {apar_store['area']}",
+                    showarrow=False,
+                    font=dict(size=12, color='black'),
+                    align='right',
+                    bgcolor='white',
+                    bordercolor='black',
+                    borderwidth=1
+                ),
+                # Annotation for the cutoff line
+                dict(
+                    x=slider_cutoff,
+                    y=0,
+                    xref="x",
+                    yref="y",
+                    text="Cutoff",
+                    showarrow=False,
+                    yshift=-10,
+                    textangle=0
+                )
+            ]
+        )
+        
+        # Return updated figure without changing the container style or data store
+        return current_style, fig, apar_store
+    
+    # Check if a full recalculation is needed (if button was clicked)
+    recalculation_needed = False
+
+    if trigger_id == 'apar-button':
+        # First time showing the plot
+        if current_style.get('display') != 'block' or apar_store is None:
+            print('first time')
+            recalculation_needed = True
+        # Check if relevant parameters have changed from stored values
+        elif apar_store is not None:
+            current_params = {
+                'uTP': uTP,
+                'uFP': uFP,
+                'uTN': uTN,
+                'uFN': uFN,
+                'pD': pD,
+                'data_type': data_type
+            }
+            
+            stored_params = apar_store.get('params', {})
+            
+            # Check if ROC data has changed
+            if 'fpr' in roc_data and 'tpr' in roc_data:
+                current_fpr = roc_data['fpr']
+                current_tpr = roc_data['tpr']
+                
+                stored_fpr = apar_store.get('fpr', [])
+                stored_tpr = apar_store.get('tpr', [])
+                
+                if len(current_fpr) != len(stored_fpr) or len(current_tpr) != len(stored_tpr):
+                    print("fpr or tpr length changed")
+                    recalculation_needed = True
+                elif any(abs(f1 - f2) > 1e-6 for f1, f2 in zip(current_fpr, stored_fpr)) or \
+                     any(abs(t1 - t2) > 1e-6 for t1, t2 in zip(current_tpr, stored_tpr)):
+                    print("fpr or tpr value changed")
+                    recalculation_needed = True
+            
+            # Check if parameters have changed
+            for param, value in current_params.items():
+
+                if param != 'data_type' and (param not in stored_params or abs(float(stored_params[param]) - float(value)) > 1e-6):
+                    print(f'{param} value is {value}')
+                    print('change in param')
+                    recalculation_needed = True
+                    break
+                elif param == 'data_type' and stored_params[param] != value:
+                    recalculation_needed = True
+                    break
+
+
+    
+
+    # If no recalculation is needed, just return the current state
+    if trigger_id == 'apar-button' and not recalculation_needed:
+        
+        # Just update the cutoff line in the existing figure
+        fig = go.Figure()
+        
+        # Add existing traces from stored data
+        fig.add_trace(go.Scatter(
+            x=apar_store['thresholds'],
+            y=apar_store['pUs'],
+            mode='lines',
+            name='pUs',
+            line=dict(color='blue')
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=apar_store['thresholds'],
+            y=apar_store['pLs'],
+            mode='lines',
+            name='pLs',
+            line=dict(color='orange')
+        ))
+        
+        # Add updated vertical line at new cutoff
+        fig.add_trace(go.Scatter(
+            x=[slider_cutoff, slider_cutoff],
+            y=[0, 1],
+            mode='lines',
+            line=dict(color='green', width=2, dash='dash'),
+            name="Selected threshold"
+        ))
+        
+        # Update annotation for the cutoff line
+        fig.update_layout(
+            title={
+                'text': 'Applicability Area (ApAr)',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            xaxis_title='Probability Cutoff Threshold',
+            yaxis_title='Prior Probability (Prevalence)',
+            xaxis=dict(tickmode='array', tickvals=np.arange(round(min(apar_store['thresholds']), 1), 
+                                                         min(round(max(apar_store['thresholds']), 1), 5), step=0.1)),
+            yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
+            template='plotly_white',
+            annotations=[
+                # Annotation for the ApAr value
+                dict(
+                    x=0.95,
+                    y=0.05,
+                    xref='paper',
+                    yref='paper',
+                    text=f"ApAr = {apar_store['area']}",
+                    showarrow=False,
+                    font=dict(size=12, color='black'),
+                    align='right',
+                    bgcolor='white',
+                    bordercolor='black',
+                    borderwidth=1
+                ),
+                # Annotation for the cutoff line
+                dict(
+                    x=slider_cutoff,
+                    y=0,
+                    xref="x",
+                    yref="y",
+                    text="Cutoff",
+                    showarrow=False,
+                    yshift=-10,
+                    textangle=0
+                )
+            ]
+        )
+        
+        return {'display': 'block'}, fig, apar_store
+    
+    # Make sure we have ROC data
+    if not roc_data:
+        return {'display': 'none'}, dash.no_update, dash.no_update
+    
+    H = uTN - uFP
+    B = uTP - uFN + 0.000000001
+    HoverB = H/B
+
+    curve_fpr = previous_values['curve_fpr']
+    curve_tpr = previous_values['curve_tpr']
+
+    # Create a DataFrame called modelTest with these two columns
+    modelTest = pd.DataFrame({
+        'fpr': previous_values['fpr'],
+        'tpr': previous_values['tpr']
+    })
+    # HoverB = 0.5
+    starttime = time.time()
+    pLs, pStars, pUs = modelPriorsOverRoc(modelTest, uTN, uTP, uFN, uFP, 0, HoverB)
+    firstCheckPoint = time.time()
+    # print(f'first* checkpoint: {firstCheckPoint - starttime}')
+    thresholds = np.array(previous_values['thresholds'])
+    thresholds = np.array(thresholds)
+    if data_type == 'imported':
+        thresholds = np.where(thresholds > 1, 1, thresholds)
+    # print(len(pLs))
+    # print(len(thresholds))
+    
+    thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+    secondCheckPoint = time.time()
+    # print(f'second* checkpoint: {secondCheckPoint - firstCheckPoint}')
+    area = 0
+
+    ########################################################concurrent processing
+    num_workers = 4
+    chunk_size = len(pLs) // num_workers
+    results = []
+    ## takes 2.3 seconds
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = []
+        largestRangePrior = 0
+        for i in range(num_workers):
+            start = i * chunk_size
+            end = (i + 1) * chunk_size if i < num_workers - 1 else len(pLs)
+            futures.append(executor.submit(calculate_area_chunk_fully_vectorized, start, end, pLs, pUs, thresholds))
+        
+        for future in concurrent.futures.as_completed(futures):
+            chunk_area, chunk_largest_range, chunk_largest_index = future.result()
+            area += chunk_area
+            if chunk_largest_range > largestRangePrior:
+                largestRangePrior = chunk_largest_range
+                largestRangePriorThresholdIndex = chunk_largest_index
+    
+    area = min(np.round(float(area), 3), 1)  # Round and cap area at 1
+
+    # Create the figure
+    apar_fig = go.Figure()
+
+    apar_fig.add_trace(go.Scatter(
+        x=thresholds,
+        y=pUs,
+        mode='lines',
+        name='pUs',
+        line=dict(color='blue')
+    ))
+
+    apar_fig.add_trace(go.Scatter(
+        x=thresholds,
+        y=pLs,
+        mode='lines',
+        name='pLs',
+        line=dict(color='orange')
+    ))
+    
+    # Add a vertical line at cutoff
+    apar_fig.add_trace(go.Scatter(
+        x=[slider_cutoff, slider_cutoff],  # Same x value for both points to create a vertical line
+        y=[0, 1],  # Full height of the y-axis
+        mode='lines',
+        line=dict(color='green', width=2, dash='dash'),
+        name="Selected threshold"
+    ))
+
+    # Add annotations to label each line at the bottom of the graph
+    apar_fig.add_annotation(
+        x=slider_cutoff,
+        y=0,
+        xref="x",
+        yref="y",
+        text="Cutoff",
+        showarrow=False,
+        yshift=-10,
+        textangle=0
+    )
+
+    # print(area)
+    apar_fig.update_layout(
+        title={
+            'text': 'Applicability Area (ApAr)',
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        xaxis_title='Probability Cutoff Threshold',
+        yaxis_title='Prior Probability (Prevalence)',
+        xaxis=dict(tickmode='array', tickvals=np.arange(round(min(thresholds), 1), min(round(max(thresholds), 1), 5), step=0.1)),
+        yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
+        template='plotly_white',
+        annotations=[
+        dict(
+            x=0.95,
+            y=0.05,
+            xref='paper',
+            yref='paper',
+            text = f'ApAr = {round(area, 3) if isinstance(area, (int, float)) else area}',
+            showarrow=False,
+            font=dict(
+                size=12,
+                color='black'
+            ),
+            align='right',
+            bgcolor='white',
+            bordercolor='black',
+            borderwidth=1
+        )]
+    )
+    
+    # Store ApAr data
+    apar_store = {
+        'thresholds': thresholds.tolist(),
+        'pLs': pLs,
+        'pUs': pUs,
+        'area': area,
+        'fpr': previous_values['fpr'],
+        'tpr': previous_values['tpr'],
+        'params': {
+            'uTP': uTP,
+            'uFP': uFP,
+            'uTN': uTN, 
+            'uFN': uFN,
+            'pD': pD,
+            'data_type': data_type
+        }
+    }
+    
+    return {'display': 'block'}, apar_fig, apar_store
+
+# Function for updating the ApAr plot with current values
+def update_apar_plot(n_clicks, slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, roc_data):
+    if n_clicks == 0 or not roc_data:
+        return dash.no_update, dash.no_update
+    
+    # Use the same function logic as generate_apar_plot
+    return generate_apar_plot(n_clicks, slider_cutoff, uTP, uFP, uTN, uFN, pD, data_type, upload_contents, roc_data)
