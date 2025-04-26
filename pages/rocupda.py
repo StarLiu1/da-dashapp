@@ -2166,7 +2166,11 @@ def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uF
             line=dict(color='green', width=2, dash='dash'),
             name="Selected threshold"
         ))
-        
+        print(data_type)
+        if data_type == 'simulated' and apar_store:
+            x_lim = round(max(apar_store['thresholds']), 2)
+        else:
+            x_lim = 1
         # Update annotation for the cutoff line
         fig.update_layout(
             title={
@@ -2176,8 +2180,7 @@ def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uF
             },
             xaxis_title='Probability Cutoff Threshold',
             yaxis_title='Prior Probability (Prevalence)',
-            xaxis=dict(tickmode='array', tickvals=np.arange(round(min(apar_store['thresholds']), 1), 
-                                                         min(round(max(apar_store['thresholds']), 1), 5), step=0.1)),
+            xaxis=dict(tickmode='array', tickvals=np.arange(round(min(apar_store['thresholds']), 1),x_lim, step=0.1)),
             yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
             template='plotly_white',
             annotations=[
@@ -2295,7 +2298,11 @@ def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uF
             line=dict(color='green', width=2, dash='dash'),
             name="Selected threshold"
         ))
-        
+        # print(data_type)
+        if data_type == 'simulated' and apar_store:
+            x_lim = round(max(apar_store['thresholds']), 2)
+        else:
+            x_lim = 1
         # Update annotation for the cutoff line
         fig.update_layout(
             title={
@@ -2305,8 +2312,7 @@ def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uF
             },
             xaxis_title='Probability Cutoff Threshold',
             yaxis_title='Prior Probability (Prevalence)',
-            xaxis=dict(tickmode='array', tickvals=np.arange(round(min(apar_store['thresholds']), 1), 
-                                                         min(round(max(apar_store['thresholds']), 1), 5), step=0.1)),
+            xaxis=dict(tickmode='array', tickvals=np.arange(round(min(apar_store['thresholds']), 1), x_lim, step=0.1)),
             yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
             template='plotly_white',
             annotations=[
@@ -2363,12 +2369,16 @@ def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uF
     # print(f'first* checkpoint: {firstCheckPoint - starttime}')
     thresholds = np.array(previous_values['thresholds'])
     thresholds = np.array(thresholds)
-    if data_type == 'imported':
+    if data_type != 'simulated':
         thresholds = np.where(thresholds > 1, 1, thresholds)
     # print(len(pLs))
-    # print(len(thresholds))
+    # print(thresholds)
     
-    thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+    if data_type == 'simulated':
+        thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs, bounded = False)
+    else:
+        thresholds, pLs, pUs = adjustpLpUClassificationThreshold(thresholds, pLs, pUs)
+    
     secondCheckPoint = time.time()
     # print(f'second* checkpoint: {secondCheckPoint - firstCheckPoint}')
     area = 0
@@ -2434,7 +2444,15 @@ def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uF
         yshift=-10,
         textangle=0
     )
-
+    if data_type == 'simulated':
+        # print(thresholds)
+        x_lim = round(max(thresholds), 2)
+        if x_lim == np.inf:
+            x_lim = thresholds.sort(reverse = True)[1]
+            thresholds[0] = x_lim
+    else:
+        x_lim = 1
+    # print(x_lim)
     # print(area)
     apar_fig.update_layout(
         title={
@@ -2444,7 +2462,7 @@ def generate_apar_plot(n_clicks, current_style, slider_cutoff, uTP, uFP, uTN, uF
         },
         xaxis_title='Probability Cutoff Threshold',
         yaxis_title='Prior Probability (Prevalence)',
-        xaxis=dict(tickmode='array', tickvals=np.arange(round(min(thresholds), 1), min(round(max(thresholds), 1), 5), step=0.1)),
+        xaxis=dict(tickmode='array', tickvals=np.arange(round(min(thresholds), 1), x_lim, step=0.1)),
         yaxis=dict(tickmode='array', tickvals=np.arange(0.0, 1.1, step=0.1)),
         template='plotly_white',
         annotations=[

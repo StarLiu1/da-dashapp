@@ -347,7 +347,7 @@ def extractThresholds(row):
         return None
     
 
-def adjustpLpUClassificationThreshold(thresholds, pLs, pUs):
+def adjustpLpUClassificationThreshold(thresholds, pLs, pUs, bounded = True):
     """
     Modifies the prior thresholds as well as the predicted probability cutoff thresholds 
     
@@ -367,8 +367,14 @@ def adjustpLpUClassificationThreshold(thresholds, pLs, pUs):
     pUs = np.array(priorModifier(pUs.tolist()))
     
     # Adjust thresholds
-    thresholds = np.where(thresholds > 1, 1, thresholds)
-    
+    if bounded:
+        thresholds = np.where(thresholds > 1, 1, thresholds)
+    # print(f'the first thresholds is {thresholds[0]}')
+    # print(thresholds[0] == np.inf)
+    if thresholds[0] == np.inf:
+        thresholds[0] = thresholds[1]
+        # print(thresholds[1])
+
     # Check if last threshold is 0 and adjust accordingly
     if thresholds[-1] == 0:
         thresholds[-1] = 0.0001
