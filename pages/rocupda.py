@@ -59,254 +59,256 @@ def get_layout():
                     html.Div([
                         html.Div([
                             html.Div([
-                                dcc.Dropdown(
-                                    id='data-type-dropdown',
-                                    options=[
-                                        {'label': 'Simulated Binormal Model', 'value': 'simulated'},
-                                        {'label': 'Imported Data', 'value': 'imported'}
-                                    ],
-                                    value='simulated'
-                                ),
-                                
-                            ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '60px'}),
-                        
-                            html.Div([
+                                html.Div([
+                                    dcc.Dropdown(
+                                        id='data-type-dropdown',
+                                        options=[
+                                            {'label': 'Simulated Binormal Model', 'value': 'simulated'},
+                                            {'label': 'Imported Data', 'value': 'imported'}
+                                        ],
+                                        value='simulated'
+                                    ),
+                                    
+                                ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column', 'paddingTop': '60px'}),
+                            
+                                html.Div([
 
-                                # Custom Modal for class input fields
-                                # Input section for class names, initially hidden
-                                html.Div(
-                                    id='class-name-inputs',
-                                    children=[
-                                        html.Br(),
-                                        html.Label("Enter label names:"),
-                                        dcc.Input(id='positive-class-name', type='text', placeholder='Positive Class', debounce=True, 
-                                                style={'width': ''}),
-                                        # html.Br(),
-                                        html.Label(" and  "),
-                                        dcc.Input(id='negative-class-name', type='text', placeholder='Negative Class', debounce=True),
-                                        # html.Br(),
-                                        html.Button("Submit", id="submit-classes", n_clicks=0)
-                                    ],
-                                    style={'display': 'none'}  # Hidden by default
-                                ),
-                                html.Div(id='input-fields', style={'width': '100%', 'padding': 0}),
+                                    # Custom Modal for class input fields
+                                    # Input section for class names, initially hidden
+                                    html.Div(
+                                        id='class-name-inputs',
+                                        children=[
+                                            html.Br(),
+                                            html.Label("Enter label names:"),
+                                            dcc.Input(id='positive-class-name', type='text', placeholder='Positive Class', debounce=True, 
+                                                    style={'width': ''}),
+                                            # html.Br(),
+                                            html.Label(" and  "),
+                                            dcc.Input(id='negative-class-name', type='text', placeholder='Negative Class', debounce=True),
+                                            # html.Br(),
+                                            html.Button("Submit", id="submit-classes", n_clicks=0)
+                                        ],
+                                        style={'display': 'none'}  # Hidden by default
+                                    ),
+                                    html.Div(id='input-fields', style={'width': '100%', 'padding': 0}),
+                                    
+                                    html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 0, 'marginBottom': 5}),
+                                    html.Div([
+                                        dcc.Slider(
+                                            id='cutoff-slider',
+                                            min=-5,
+                                            max=5,
+                                            step=0.01,
+                                            value=0,
+                                            tooltip={"placement": "right", "always_visible": False},
+                                            marks = {i: f'{i:.1f}' for i in range(-5, 6)}
+                                        )
+                                    ], style={'width': '100%'}),
+                                    html.H4(id='utp-value', children='Utility of true positive (uTP): ', style={'marginTop': 5, 'marginBottom': 5}),
+                                    html.Div([
+                                        dcc.Slider(
+                                            id='uTP-slider',
+                                            min=0,
+                                            max=1,
+                                            step=0.01,
+                                            value=0.8,
+                                            tooltip={"placement": "right", "always_visible": False},
+                                            marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
+                                        )
+                                    ], style={'width': '100%'}),
+                                    html.H4(id='ufp-value', children='Utility of false positive (uFP): ', style={'marginTop': 5, 'marginBottom': 5}),
+                                    html.Div([
+                                        dcc.Slider(
+                                            id='uFP-slider',
+                                            min=0,
+                                            max=1,
+                                            step=0.01,
+                                            value=0.85,
+                                            tooltip={"placement": "right", "always_visible": False},
+                                            marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
+                                        )
+                                    ], style={'width': '100%'}),
+                                    html.H4(id='utn-value', children='Utility of true negative (uTN): ', style={'marginTop': 5, 'marginBottom': 5}),
+                                    html.Div([
+                                        dcc.Slider(
+                                            id='uTN-slider',
+                                            min=0,
+                                            max=1,
+                                            step=0.01,
+                                            value=1,
+                                            tooltip={"placement": "right", "always_visible": False},
+                                            marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
+                                        )
+                                    ], style={'width': '100%'}),
+                                    html.H4(id='ufn-value', children='Utility of false negative (uFN): ', style={'marginTop': 5, 'marginBottom': 5}),
+                                    html.Div([
+                                        dcc.Slider(
+                                            id='uFN-slider',
+                                            min=0,
+                                            max=1,
+                                            step=0.01,
+                                            value=0,
+                                            tooltip={"placement": "right", "always_visible": False},
+                                            marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
+                                        )
+                                    ], style={'width': '100%'}),
+                                    html.H4(id='pd-value', children='Disease Prevalence: ', style={'marginTop': 5, 'marginBottom': 5}),
+                                    html.Div([
+                                        dcc.Slider(
+                                            id='pD-slider',
+                                            min=0,
+                                            max=1,
+                                            step=0.01,
+                                            value=0.5,
+                                            tooltip={"placement": "right", "always_visible": False},
+                                            marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
+                                            
+                                        )
+                                    ], style={'width': '100%'}),
+                                    html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
+                                ], style={'paddingLeft': '10px', 'width': '100%', 'overflowY': 'auto', 'maxHeight': '350px'}),
                                 
-                                html.H4(id='cutoff-value', children='Raw Cutoff: ', style={'marginTop': 0, 'marginBottom': 5}),
+                                
                                 html.Div([
-                                    dcc.Slider(
-                                        id='cutoff-slider',
-                                        min=-5,
-                                        max=5,
-                                        step=0.01,
-                                        value=0,
-                                        tooltip={"placement": "right", "always_visible": False},
-                                        marks = {i: f'{i:.1f}' for i in range(-5, 6)}
-                                    )
-                                ], style={'width': '100%'}),
-                                html.H4(id='utp-value', children='Utility of true positive (uTP): ', style={'marginTop': 5, 'marginBottom': 5}),
+                                    dcc.Loading(
+                                        id="loading-spinner",
+                                        type="circle",
+                                        fullscreen=False,
+                                        children=[
+                                            html.Button("Generate Report", id="generate-report-button", n_clicks=0, style={
+                                                'width': '48%', 
+                                            }),
+                                            dcc.Download(id="download-report"),
+                                            html.Button("Generate Report with ApAr", id="generate-apar-report-button", n_clicks=0, style={
+                                                'width': '48%', 
+                                            }),
+                                            dcc.Download(id="download-report-wapar"),
+                                        ],
+                                        style={'display': 'inline-block', 'marginLeft': 'auto', 'marginRight': 'auto'}
+                                    ),
+                                ]),
+                                
+                                # Add "Show ApAr" button
                                 html.Div([
-                                    dcc.Slider(
-                                        id='uTP-slider',
-                                        min=0,
-                                        max=1,
-                                        step=0.01,
-                                        value=0.8,
-                                        tooltip={"placement": "right", "always_visible": False},
-                                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
-                                    )
-                                ], style={'width': '100%'}),
-                                html.H4(id='ufp-value', children='Utility of false positive (uFP): ', style={'marginTop': 5, 'marginBottom': 5}),
-                                html.Div([
-                                    dcc.Slider(
-                                        id='uFP-slider',
-                                        min=0,
-                                        max=1,
-                                        step=0.01,
-                                        value=0.85,
-                                        tooltip={"placement": "right", "always_visible": False},
-                                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
-                                    )
-                                ], style={'width': '100%'}),
-                                html.H4(id='utn-value', children='Utility of true negative (uTN): ', style={'marginTop': 5, 'marginBottom': 5}),
-                                html.Div([
-                                    dcc.Slider(
-                                        id='uTN-slider',
-                                        min=0,
-                                        max=1,
-                                        step=0.01,
-                                        value=1,
-                                        tooltip={"placement": "right", "always_visible": False},
-                                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
-                                    )
-                                ], style={'width': '100%'}),
-                                html.H4(id='ufn-value', children='Utility of false negative (uFN): ', style={'marginTop': 5, 'marginBottom': 5}),
-                                html.Div([
-                                    dcc.Slider(
-                                        id='uFN-slider',
-                                        min=0,
-                                        max=1,
-                                        step=0.01,
-                                        value=0,
-                                        tooltip={"placement": "right", "always_visible": False},
-                                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
-                                    )
-                                ], style={'width': '100%'}),
-                                html.H4(id='pd-value', children='Disease Prevalence: ', style={'marginTop': 5, 'marginBottom': 5}),
-                                html.Div([
-                                    dcc.Slider(
-                                        id='pD-slider',
-                                        min=0,
-                                        max=1,
-                                        step=0.01,
-                                        value=0.5,
-                                        tooltip={"placement": "right", "always_visible": False},
-                                        marks={i: f'{i:.1f}' for i in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]}
-                                        
-                                    )
-                                ], style={'width': '100%'}),
-                                html.H4(id='optimalcutoff-value', style={'marginTop': 5}),
-                            ], style={'paddingLeft': '10px', 'width': '100%', 'overflowY': 'auto', 'maxHeight': '350px'}),
-                            
-                            
-                            html.Div([
-                                dcc.Loading(
-                                    id="loading-spinner",
-                                    type="circle",
-                                    fullscreen=False,
-                                    children=[
-                                        html.Button("Generate Report", id="generate-report-button", n_clicks=0, style={
-                                            'width': '48%', 
-                                        }),
-                                        dcc.Download(id="download-report"),
-                                        html.Button("Generate Report with ApAr", id="generate-apar-report-button", n_clicks=0, style={
-                                            'width': '48%', 
-                                        }),
-                                        dcc.Download(id="download-report-wapar"),
-                                    ],
-                                    style={'display': 'inline-block', 'marginLeft': 'auto', 'marginRight': 'auto'}
-                                ),
-                            ]),
-                            
-                            # Add "Show ApAr" button
-                            html.Div([
-                                html.Button(
-                                    "Show ApAr Figure", 
-                                    id="apar-button", 
-                                    n_clicks=0,
-                                    style={
-                                        'width': '100%',
-                                        'marginTop': '15px',
-                                        'marginBottom': '10px',
-                                        'backgroundColor': '#012b75',
-                                        'color': 'white',
-                                        'border': 'none',
-                                        'padding': '10px',
-                                        'borderRadius': '5px',
-                                        'cursor': 'pointer'
-                                    }
-                                ),
-                            ]),
-                            
-                            html.Div(children='Dashboard as of: 03/23/25', style={'marginTop': 0, 'marginBottom': 5}),
-                        ], style={'paddingLeft': '10px'})
-                    ], style={'display': 'flex', 'flexDirection': 'column'})
+                                    html.Button(
+                                        "Show ApAr Figure", 
+                                        id="apar-button", 
+                                        n_clicks=0,
+                                        style={
+                                            'width': '100%',
+                                            'marginTop': '15px',
+                                            'marginBottom': '10px',
+                                            'backgroundColor': '#012b75',
+                                            'color': 'white',
+                                            'border': 'none',
+                                            'padding': '10px',
+                                            'borderRadius': '5px',
+                                            'cursor': 'pointer'
+                                        }
+                                    ),
+                                ]),
+                                
+                                html.Div(children='Dashboard as of: 03/23/25', style={'marginTop': 0, 'marginBottom': 5}),
+                            ], style={'paddingLeft': '10px'})
+                        ], style={'display': 'flex', 'flexDirection': 'row'})
 
-                ], style={'height': '100%', 'width': '20%', 'display': 'flex', 'flexDirection': 'column', "paddingLeft": "10px"}),
-                html.Div([
+                    ], style={'height': '100%', 'width': '20%', 'flexDirection': 'row', "paddingLeft": "10px"}),
                     html.Div([
                         html.Div([
-                            html.Div(
-                                dcc.Loading(
-                                    id="loading",
-                                    type="default",
-                                    fullscreen=False,
-                                    children=[
-                                        dcc.Graph(id='distribution-plot', style={'height': '45vh'})
-                                ])
-                                , style={'width': '100%', 'paddingTop': '50px'
-                            })
-                        ], style={'height': '50%', 'display': 'flex', 'flexDirection': 'row', 'marginTop': '0px'}),
-                        html.Div([
                             html.Div([
                                 html.Div(
-                                    style={
-                                        "alignItems": "center",
-                                        'height': '95%',
-                                        'margin': 0
-                                    },
-                                    children=[
-                                        dcc.Loading(
-                                            id="loading",
-                                            type="default",
-                                            fullscreen=False,
-                                            style={'margin': 0},
-                                            children=[
-                                                dcc.Graph(id='roc-plot', style={'height': '47vh', "width": "35vw"}),
-                                            ]
-                                        )  
-                                    ]
-                                ),
+                                    dcc.Loading(
+                                        id="loading",
+                                        type="default",
+                                        fullscreen=False,
+                                        children=[
+                                            dcc.Graph(id='distribution-plot', style={'height': '45vh'})
+                                    ])
+                                    , style={'width': '100%', 'paddingTop': '50px'
+                                })
+                            ], style={'height': '50%', 'display': 'flex', 'flexDirection': 'row', 'marginTop': '0px'}),
+                            html.Div([
+                                html.Div([
+                                    html.Div(
+                                        style={
+                                            "alignItems": "center",
+                                            'height': '95%',
+                                            'margin': 0
+                                        },
+                                        children=[
+                                            dcc.Loading(
+                                                id="loading",
+                                                type="default",
+                                                fullscreen=False,
+                                                style={'margin': 0},
+                                                children=[
+                                                    dcc.Graph(id='roc-plot', style={'height': '47vh', "width": "35vw"}),
+                                                ]
+                                            )  
+                                        ]
+                                    ),
+                                    
+                                    html.Div(
+                                        style={
+                                            "display": "flex",
+                                            "alignItems": "center",
+                                            'height': '5%',
+                                            'margin': 0
+                                        },
+                                        children=[
+                                            html.Div(style = {'width': '5%'}),
+                                            # The button
+                                            html.Button(
+                                                'Switch to Line Mode (select region for partial AUC)', 
+                                                id='toggle-draw-mode', 
+                                                n_clicks=0, 
+                                                style={'paddingBottom': '0', 'width': '70%', 'marginLeft': '5%'}
+                                            ),
+                                            html.Div(style = {'width': '5%'}),
+                                            
+                                            # The question mark
+                                            create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'],
+                                                            link_text = tooltip_data['roc']['link_text'],
+                                                            link_url=tooltip_data['roc']['link_url'], 
+                                                            top = "-215px", left = "50%", width = "200px"),
+                                        ]
+                                    )
+                                    
+                                ], style={'height': '100%', 'width': '50%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '0px'}),
                                 
-                                html.Div(
-                                    style={
-                                        "display": "flex",
-                                        "alignItems": "center",
-                                        'height': '5%',
-                                        'margin': 0
-                                    },
-                                    children=[
-                                        html.Div(style = {'width': '5%'}),
-                                        # The button
-                                        html.Button(
-                                            'Switch to Line Mode (select region for partial AUC)', 
-                                            id='toggle-draw-mode', 
-                                            n_clicks=0, 
-                                            style={'paddingBottom': '0', 'width': '70%', 'marginLeft': '5%'}
-                                        ),
-                                        html.Div(style = {'width': '5%'}),
-                                        
-                                        # The question mark
-                                        create_info_mark(tooltip_id="roc", tooltip_text=tooltip_data['roc']['tooltip_text'],
-                                                        link_text = tooltip_data['roc']['link_text'],
-                                                        link_url=tooltip_data['roc']['link_url'], 
-                                                        top = "-215px", left = "50%", width = "200px"),
-                                    ]
-                                )
-                                
-                            ], style={'height': '100%', 'width': '50%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '0px'}),
+                                html.Div([
+                                    dcc.Loading(
+                                        id="loading",
+                                        type="default",
+                                        fullscreen=False,
+                                        children=[
+                                            dcc.Graph(id='utility-plot', style={'height': '47vh', "width": "35vw"}),
+                                    ]),
+                                    html.Div(
+                                        style={
+                                            "display": "flex",
+                                            "alignItems": "center",
+                                            "height": "5%",
+                                            'paddingTop': '1.75%'
+                                        },
+                                        children=[
+                                            html.Div(style = {'width': '80%'}),
+                                            # The question mark
+                                            create_info_mark(tooltip_id="utility", tooltip_text=tooltip_data['utility']['tooltip_text'],
+                                                            link_text = tooltip_data['utility']['link_text'],
+                                                            link_url=tooltip_data['utility']['link_url'], 
+                                                            top = "-105px", left = "0%", width = "200px"),
+                                        ]
+                                    )
+                                    
+                                ], style={'width': '50%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '0px'}),
+                            ], style={'width': '100%', 'height': '50%', 'display': 'flex', 'flexDirection': 'row'})
                             
-                            html.Div([
-                                dcc.Loading(
-                                    id="loading",
-                                    type="default",
-                                    fullscreen=False,
-                                    children=[
-                                        dcc.Graph(id='utility-plot', style={'height': '47vh', "width": "35vw"}),
-                                ]),
-                                html.Div(
-                                    style={
-                                        "display": "flex",
-                                        "alignItems": "center",
-                                        "height": "5%",
-                                        'paddingTop': '1.75%'
-                                    },
-                                    children=[
-                                        html.Div(style = {'width': '80%'}),
-                                        # The question mark
-                                        create_info_mark(tooltip_id="utility", tooltip_text=tooltip_data['utility']['tooltip_text'],
-                                                        link_text = tooltip_data['utility']['link_text'],
-                                                        link_url=tooltip_data['utility']['link_url'], 
-                                                        top = "-105px", left = "0%", width = "200px"),
-                                    ]
-                                )
-                                
-                            ], style={'width': '50%', 'display': 'flex', 'flexDirection': 'column', 'marginTop': '0px'}),
-                        ], style={'width': '100%', 'height': '50%', 'display': 'flex', 'flexDirection': 'row'})
-                        
-                    ], style={'width': '80%', 'display': 'flex', 'flexDirection': 'column'}),
+                        ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'column'}),
 
+                    ], style={'height': '100vh', 'display': 'flex', 'width': '80%', 'flexDirection': 'column'}),
                 ], style={'height': '100vh', 'display': 'flex', 'width': '100%', 'flexDirection': 'row'}),
-    
+
                 # Add ApAr figure container - hidden by default
                 html.Div([
                     html.Div([
